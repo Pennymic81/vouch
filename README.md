@@ -12,6 +12,22 @@ npm run dev     # http://localhost:3000
 npm run build   # production build
 ```
 
+## Tests
+
+End-to-end tests run in Playwright on desktop (1440px) and phone (Pixel 7) sizes:
+
+```bash
+npx playwright install chromium   # first time only
+npm test                          # builds, starts the app, runs every test
+npm run test:ui                   # interactive runner
+```
+
+- `tests/pages.spec.ts` — every page loads, has its heading and title, no console errors, no sideways scrolling, 404 works
+- `tests/flows.spec.ts` — business-owner journey, milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
+- `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
+
+GitHub Actions runs lint and the full suite on every push and pull request.
+
 ## Pages (step 1 — UI)
 
 | Route | Page |

@@ -30,7 +30,7 @@ export function AppHeader({
         <Logo size={28} textClass="text-xl" />
         <button
           type="button"
-          aria-label="Account menu"
+          aria-label="AO, account menu"
           className={`order-2 inline-flex size-10 items-center justify-center rounded-full font-bold md:order-3 ${
             role === "client" ? "bg-brand-tint text-brand-dark" : "bg-orange-100 text-alert-dark"
           }`}

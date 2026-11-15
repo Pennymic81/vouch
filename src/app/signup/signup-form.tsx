@@ -28,7 +28,7 @@ export function SignUpForm() {
       <div className="flex flex-col gap-2">
         <h2 className="text-[30px] font-bold md:text-[34px]">Create your account</h2>
         <p className="text-base text-muted">
-          Already have one? <Link href="#" className="font-semibold text-brand">Sign in</Link>
+          Already have one? <Link href="#" className="font-semibold text-brand underline underline-offset-2">Sign in</Link>
         </p>
       </div>
 
@@ -99,8 +99,8 @@ export function SignUpForm() {
         <Button variant="secondary" className="rounded-xl py-3.5">Continue with GitHub</Button>
       </div>
       <p className="text-[13px] leading-relaxed text-muted">
-        By creating an account you agree to the <Link href="#" className="text-brand">Terms</Link> and{" "}
-        <Link href="#" className="text-brand">Privacy Policy</Link>.
+        By creating an account you agree to the <Link href="#" className="text-brand underline underline-offset-2">Terms</Link> and{" "}
+        <Link href="#" className="text-brand underline underline-offset-2">Privacy Policy</Link>.
       </p>
     </form>
   );
