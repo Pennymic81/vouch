@@ -7,9 +7,8 @@ const pages: PageCase[] = [
   { path: "/", heading: "Get your project built — and know it's built right." },
   { path: "/signup", heading: "Create your account" },
   { path: "/signin", heading: "Sign in to Vouch" },
-  { path: "/projects/new", heading: "Your idea", role: "client" },
-  { path: "/projects/new/matches", heading: "3 matches for your chatbot", role: "client" },
-  { path: "/projects/support-chatbot", heading: "Customer support chatbot", role: "client" },
+  { path: "/projects", heading: "Your projects", role: "client" },
+  { path: "/projects/new", heading: "What do you want to build?", role: "client" },
   { path: "/dashboard", heading: /^Welcome, Tunde$/, role: "developer" },
 ];
 

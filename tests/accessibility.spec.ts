@@ -6,9 +6,8 @@ const cases: { path: string; role?: Role }[] = [
   { path: "/" },
   { path: "/signup" },
   { path: "/signin" },
+  { path: "/projects", role: "client" },
   { path: "/projects/new", role: "client" },
-  { path: "/projects/new/matches", role: "client" },
-  { path: "/projects/support-chatbot", role: "client" },
   { path: "/dashboard", role: "developer" },
 ];
 

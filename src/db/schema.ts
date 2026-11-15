@@ -79,3 +79,68 @@ export const verification = sqliteTable(
 );
 
 export type Role = (typeof user.role.enumValues)[number];
+
+// ── Projects (step 3) ─────────────────────────────────────────────
+
+export const PROJECT_STATUSES = ["draft", "open", "in_progress", "completed", "cancelled"] as const;
+export const MILESTONE_STATUSES = [
+  "planned",
+  "funded",
+  "in_progress",
+  "in_qa",
+  "awaiting_approval",
+  "changes_requested",
+  "paid",
+] as const;
+
+export const project = sqliteTable(
+  "project",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    idea: text("idea").notNull(),
+    summary: text("summary"),
+    currency: text("currency").notNull().default("USD"),
+    status: text("status", { enum: PROJECT_STATUSES }).notNull().default("draft"),
+    ...timestamps,
+  },
+  (t) => [
+    index("project_client_id_idx").on(t.clientId),
+    check(
+      "project_status_check",
+      sql`${t.status} in ('draft', 'open', 'in_progress', 'completed', 'cancelled')`,
+    ),
+  ],
+);
+
+export const milestone = sqliteTable(
+  "milestone",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    title: text("title").notNull(),
+    /** What "done" means — one acceptance criterion per entry. */
+    criteria: text("criteria", { mode: "json" }).$type<string[]>().notNull(),
+    /** Whole units of the project's currency. */
+    amount: integer("amount").notNull(),
+    durationDays: integer("duration_days").notNull(),
+    status: text("status", { enum: MILESTONE_STATUSES }).notNull().default("planned"),
+    ...timestamps,
+  },
+  (t) => [
+    index("milestone_project_id_idx").on(t.projectId),
+    check("milestone_amount_check", sql`${t.amount} > 0`),
+    check("milestone_duration_check", sql`${t.durationDays} > 0`),
+  ],
+);
+
+export type Project = typeof project.$inferSelect;
+export type Milestone = typeof milestone.$inferSelect;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];

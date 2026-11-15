@@ -96,7 +96,7 @@ export default function DashboardPage() {
                     <span className="font-semibold">Auto-approves in 4 days</span>
                   </div>
                   <div className="flex flex-wrap gap-2.5">
-                    <ButtonLink href={`/projects/${samplePlan.id}`} variant="secondary" size="sm">Open project</ButtonLink>
+                    <ButtonLink href="#" variant="secondary" size="sm">Open project</ButtonLink>
                     <Button variant="secondary" size="sm">Post weekly update</Button>
                   </div>
                 </div>

@@ -7,7 +7,7 @@ import { getSession, initialsOf } from "@/lib/session";
 type Tab = { href: string; label: string; key: string };
 
 const clientTabs: Tab[] = [
-  { key: "projects", href: "/projects/support-chatbot", label: "Projects" },
+  { key: "projects", href: "/projects", label: "Projects" },
   { key: "new", href: "/projects/new", label: "New project" },
   { key: "messages", href: "#", label: "Messages" },
 ];

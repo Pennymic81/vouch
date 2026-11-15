@@ -117,7 +117,7 @@ test.describe("sign in and out", () => {
 });
 
 test.describe("protected pages", () => {
-  for (const path of ["/projects/new", "/projects/new/matches", "/projects/support-chatbot", "/dashboard"]) {
+  for (const path of ["/projects", "/projects/new", "/dashboard"]) {
     test(`${path} sends signed-out visitors to sign in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(`/signin?next=${encodeURIComponent(path)}`);
@@ -128,12 +128,12 @@ test.describe("protected pages", () => {
     const { email } = await signUpViaApi(page, "client");
     await page.context().clearCookies();
 
-    await page.goto("/projects/support-chatbot");
+    await page.goto("/projects");
     await expect(page).toHaveURL(/\/signin/);
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL("/projects/support-chatbot");
+    await expect(page).toHaveURL("/projects");
   });
 
   test("?next cannot send people to another website", async ({ page }) => {

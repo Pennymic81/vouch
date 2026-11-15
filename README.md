@@ -23,6 +23,19 @@ The SQLite database (`vouch.db`) is created and migrated automatically on first 
 - Roles are checked on the server and by a database constraint, and can't be changed after sign-up
 - Database schema: `src/db/schema.ts` · migrations: `drizzle/` (`npx drizzle-kit generate` after schema changes)
 
+## Projects (step 3)
+
+Business owners create projects and build their plans, all saved in the database:
+
+- `/projects` — every project with its status, budget and time
+- `/projects/new` — describe the idea in plain words
+- `/projects/[id]/plan` — add, edit, reorder and delete milestones; each has what "done" means (one check per line), an amount and days. Totals update as you go
+- **Approve plan & find matches** publishes the plan (it's then locked) and opens `/projects/[id]/matches`
+- `/projects/[id]` — the workspace with milestones, statuses and budget
+- Every read and change checks the project belongs to the signed-in business owner; inputs are validated on the server with zod and backed by database constraints
+
+Matches are still example developers until real matching (step 5).
+
 ## Tests
 
 End-to-end tests run in Playwright on desktop (1440px) and phone (Pixel 7) sizes:
@@ -35,21 +48,24 @@ npm run test:ui                   # interactive runner
 
 - `tests/pages.spec.ts` — every page loads, has its heading and title, no console errors, no sideways scrolling, 404 works
 - `tests/auth.spec.ts` — sign-up per role, duplicate emails, password rules, sign-in/out, wrong passwords, protected pages, role separation, safe redirects, forged cookies
-- `tests/flows.spec.ts` — business-owner journey, milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
+- `tests/projects.spec.ts` — full journey from landing page to published plan, plan editing (add, edit, reorder, delete, totals), server-side validation, publishing rules, privacy between accounts
+- `tests/flows.spec.ts` — milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
 GitHub Actions runs lint and the full suite on every push and pull request.
 
-## Pages (step 1 — UI)
+## Pages
 
 | Route | Page |
 |---|---|
 | `/` | Landing page |
 | `/signup` | Sign up (business owner or developer) |
 | `/signin` | Sign in |
-| `/projects/new` | AI scoping — idea → plan with milestones |
-| `/projects/new/matches` | Matched developers with "why they fit" |
-| `/projects/support-chatbot` | Client project workspace (QA review, escrow, change requests) |
+| `/projects` | Your projects |
+| `/projects/new` | Describe a new project |
+| `/projects/[id]/plan` | Build the plan (milestones) |
+| `/projects/[id]/matches` | Matched developers with "why they fit" |
+| `/projects/[id]` | Project workspace |
 | `/dashboard` | Developer dashboard |
 
 Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and `[AMOUNT]` are placeholders to set later.
@@ -63,7 +79,7 @@ Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and
 ## Next steps
 
 2. ~~Accounts (business owner / developer roles)~~ ✓
-3. Database — projects, milestones, matches (Postgres + Prisma)
+3. ~~Projects and plans saved in the database~~ ✓
 4. AI scoping
 5. Matching
 6. Milestones & QA flow

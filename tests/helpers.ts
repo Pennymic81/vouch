@@ -30,3 +30,35 @@ export async function signUpViaForm(page: Page, role: Role, name: string, email 
   await page.getByRole("button", { name: "Create account" }).click();
   return email;
 }
+
+export type MilestoneInput = { title: string; criteria: string[]; amount: number; days: number };
+
+/** Creates a draft project through the real form and lands on its plan page. */
+export async function createProject(page: Page, title = "Customer support chatbot") {
+  await page.goto("/projects/new");
+  await page.getByLabel("Project name").fill(title);
+  await page
+    .getByLabel("Describe your idea")
+    .fill("I run an online furniture store. Customers keep asking about delivery and returns on WhatsApp and our website.");
+  await page.getByRole("button", { name: "Continue to plan" }).click();
+  await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}\/plan$/);
+  return page.url().split("/").at(-2)!;
+}
+
+/** Adds a milestone using the plan page's form. */
+export async function addMilestone(page: Page, m: MilestoneInput) {
+  const form = page.getByRole("form", { name: "New milestone" });
+  if (!(await form.isVisible())) await page.getByRole("button", { name: "+ Add a milestone" }).click();
+  await form.getByLabel("Milestone name").fill(m.title);
+  await form.getByLabel(/What "done" means/).fill(m.criteria.join("\n"));
+  await form.getByLabel("Amount (USD)").fill(String(m.amount));
+  await form.getByLabel("Days to complete").fill(String(m.days));
+  await form.getByRole("button", { name: "Add milestone" }).click();
+  await expect(page.getByRole("list", { name: "Milestones" }).getByRole("heading", { name: new RegExp(m.title) })).toBeVisible();
+}
+
+export const sampleMilestones: MilestoneInput[] = [
+  { title: "Knowledge base & FAQ import", criteria: ["Policies loaded into the bot", "Answers 20 test questions correctly"], amount: 800, days: 7 },
+  { title: "Chat widget on your website", criteria: ["Works on every page and on phones"], amount: 600, days: 5 },
+  { title: "WhatsApp and hand-off to staff", criteria: ["Same answers on WhatsApp", "Hard questions go to a staff inbox"], amount: 1200, days: 10 },
+];
