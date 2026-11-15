@@ -1,0 +1,56 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "tailwindcss";
+
+/* Vouch design tokens — match the canvas designs exactly */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0f172a; /* headings, dark sections */
+  --color-body: #334155; /* body text */
+  --color-muted: #475569; /* secondary text */
+  --color-line: #e2e8f0; /* borders */
+  --color-line-strong: #cbd5e1; /* input borders */
+  --color-ground: #f8fafc; /* page background */
+
+  --color-brand: #4338ca; /* primary / verified */
+  --color-brand-dark: #3730a3;
+  --color-brand-deep: #312e81;
+  --color-brand-soft: #eef2ff;
+  --color-brand-tint: #e0e7ff;
+  --color-brand-light: #a5b4fc;
+
+  --color-alert: #c2410c; /* needs action */
+  --color-alert-dark: #9a3412;
+  --color-alert-soft: #fff7ed;
+  --color-alert-line: #fed7aa;
+  --color-alert-light: #fdba74;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-brand-light);
+  outline-offset: 2px;
+}
