@@ -121,7 +121,7 @@ test.describe("building the plan", () => {
     await page.getByRole("textbox", { name: "Project name" }).fill("Store helper bot");
     await page.getByRole("textbox", { name: /One-line summary/ }).fill("Answers customer questions day and night.");
     await page.getByRole("button", { name: "Save details" }).click();
-    await expect(page.getByRole("status")).toContainText("Saved");
+    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "Store helper bot" })).toBeVisible();
   });
 

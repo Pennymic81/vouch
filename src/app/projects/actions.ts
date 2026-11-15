@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { milestone, project } from "@/db/schema";
 import { getSession } from "@/lib/session";
+import { AiFailedError, AiNotConfiguredError, MAX_AI_GENERATIONS, generatePlan } from "@/lib/ai/plan";
 
 export type FormState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
 
@@ -176,4 +177,56 @@ export async function deleteProject(projectId: string) {
   const p = await editableProject(projectId);
   await db.delete(project).where(eq(project.id, p.id));
   redirect("/projects");
+}
+
+// ── AI planning (step 4) ──────────────────────────────────────────
+
+export async function writePlanWithAi(projectId: string, _: FormState, formData: FormData): Promise<FormState> {
+  const p = await editableProject(projectId);
+  if (p.aiGenerations >= MAX_AI_GENERATIONS) {
+    return { error: `You've used all ${MAX_AI_GENERATIONS} AI rewrites for this project. You can still edit milestones yourself.` };
+  }
+
+  // Answers to the AI's earlier questions arrive as answer-0, answer-1, …
+  const answers = (p.aiQuestions ?? []).map((q, i) => ({
+    question: q.question,
+    answer: String(formData.get(`answer-${i}`) ?? q.answer ?? "").trim().slice(0, 500),
+  }));
+
+  let plan;
+  try {
+    plan = await generatePlan({ title: p.title, idea: p.idea, answers });
+  } catch (err) {
+    if (err instanceof AiNotConfiguredError || err instanceof AiFailedError) return { error: err.message };
+    throw err;
+  }
+
+  db.transaction((tx) => {
+    tx.delete(milestone).where(eq(milestone.projectId, p.id)).run();
+    plan.milestones.forEach((m, i) =>
+      tx
+        .insert(milestone)
+        .values({
+          id: crypto.randomUUID(),
+          projectId: p.id,
+          position: i + 1,
+          title: m.title,
+          criteria: m.criteria,
+          amount: m.amountUsd,
+          durationDays: m.days,
+        })
+        .run(),
+    );
+    tx.update(project)
+      .set({
+        summary: plan.summary,
+        aiGenerations: p.aiGenerations + 1,
+        aiQuestions: plan.questions.map((question) => ({ question })),
+        updatedAt: new Date(),
+      })
+      .where(eq(project.id, p.id))
+      .run();
+  });
+  refresh();
+  return { ok: true };
 }

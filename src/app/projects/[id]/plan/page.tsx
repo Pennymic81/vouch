@@ -7,6 +7,8 @@ import { ShieldIcon } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import { formatDays, formatMoney, getProjectForClient, totalsOf } from "@/lib/projects";
 import { MilestoneEditor, NewMilestoneForm, ProjectDetailsForm, PublishBar } from "./plan-editor";
+import { AiPanel } from "./ai-panel";
+import { MAX_AI_GENERATIONS, aiConfigured } from "@/lib/ai/plan";
 
 export const metadata: Metadata = { title: "Build your plan" };
 
@@ -24,7 +26,7 @@ async function Plan({ params }: { params: Promise<{ id: string }> }) {
       <div className="flex flex-wrap items-start gap-7">
         <section aria-labelledby="details-h" className="flex min-w-0 flex-[1_1_380px] flex-col gap-4 rounded-[18px] border border-line bg-white p-6 md:p-7">
           <h2 id="details-h" className="text-[22px] font-bold">Your idea</h2>
-          <ProjectDetailsForm projectId={p.id} title={p.title} idea={p.idea} summary={p.summary ?? ""} />
+          <ProjectDetailsForm key={p.aiGenerations} projectId={p.id} title={p.title} idea={p.idea} summary={p.summary ?? ""} />
         </section>
 
         <section aria-labelledby="plan-h" className="flex min-w-0 flex-[999_1_620px] flex-col gap-7 rounded-[18px] border border-line bg-white p-6 md:p-8">
@@ -35,6 +37,21 @@ async function Plan({ params }: { params: Promise<{ id: string }> }) {
               Break the work into milestones. Each one is checked against what &quot;done&quot; means before any payment is released.
             </p>
           </div>
+
+          <AiPanel
+            projectId={p.id}
+            configured={aiConfigured()}
+            hasMilestones={p.milestones.length > 0}
+            questions={p.aiQuestions ?? []}
+            remaining={Math.max(0, MAX_AI_GENERATIONS - p.aiGenerations)}
+          />
+
+          {p.summary && (
+            <p className="rounded-[14px] border border-line px-5 py-4 text-base leading-relaxed text-body">
+              <span className="font-semibold text-ink">Summary: </span>
+              {p.summary}
+            </p>
+          )}
 
           <dl className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
             {[

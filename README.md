@@ -36,6 +36,16 @@ Business owners create projects and build their plans, all saved in the database
 
 Matches are still example developers until real matching (step 5).
 
+## AI scoping (step 4)
+
+On the plan page, **Write my plan with AI** reads the owner's description and drafts a summary, 3–6 milestones with testable "done" checks, prices and days, plus up to 3 clarifying questions. Answering them and pressing **Update plan with my answers** rewrites the plan.
+
+- Uses the Anthropic API with structured output (`src/lib/ai/plan.ts`); set `ANTHROPIC_API_KEY` in `.env`
+- Every AI result is validated before it's saved; amounts and days are rounded to whole numbers
+- Rewrites replace the current milestones (after a confirmation) and are limited to 10 per project
+- The owner can edit, reorder or delete any AI milestone afterwards
+- Tests use a predictable stand-in (`AI_FAKE=1`), so they never call the real API
+
 ## Tests
 
 End-to-end tests run in Playwright on desktop (1440px) and phone (Pixel 7) sizes:
@@ -49,6 +59,7 @@ npm run test:ui                   # interactive runner
 - `tests/pages.spec.ts` — every page loads, has its heading and title, no console errors, no sideways scrolling, 404 works
 - `tests/auth.spec.ts` — sign-up per role, duplicate emails, password rules, sign-in/out, wrong passwords, protected pages, role separation, safe redirects, forged cookies
 - `tests/projects.spec.ts` — full journey from landing page to published plan, plan editing (add, edit, reorder, delete, totals), server-side validation, publishing rules, privacy between accounts
+- `tests/ai.spec.ts` — AI writes a plan, answering its questions updates it, rewrites replace hand-made milestones, editing AI milestones, the 10-rewrite limit, locked after publishing
 - `tests/flows.spec.ts` — milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
@@ -80,7 +91,7 @@ Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and
 
 2. ~~Accounts (business owner / developer roles)~~ ✓
 3. ~~Projects and plans saved in the database~~ ✓
-4. AI scoping
+4. ~~AI scoping~~ ✓
 5. Matching
 6. Milestones & QA flow
 7. Escrow payments

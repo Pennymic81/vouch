@@ -105,6 +105,10 @@ export const project = sqliteTable(
     summary: text("summary"),
     currency: text("currency").notNull().default("USD"),
     status: text("status", { enum: PROJECT_STATUSES }).notNull().default("draft"),
+    /** How many times AI has written this plan (limits cost and abuse). */
+    aiGenerations: integer("ai_generations").notNull().default(0),
+    /** Clarifying questions from the last AI run, and the client's answers. */
+    aiQuestions: text("ai_questions", { mode: "json" }).$type<{ question: string; answer?: string }[]>(),
     ...timestamps,
   },
   (t) => [
