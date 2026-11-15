@@ -5,8 +5,10 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { milestone, project } from "@/db/schema";
+import { invitation, milestone, project } from "@/db/schema";
 import { getSession } from "@/lib/session";
+import { cleanSkills } from "@/lib/skills";
+import { findMatches, MIN_SCORE } from "@/lib/matching";
 import { AiFailedError, AiNotConfiguredError, MAX_AI_GENERATIONS, generatePlan } from "@/lib/ai/plan";
 
 export type FormState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
@@ -17,6 +19,8 @@ const projectSchema = z.object({
   title: z.string().trim().min(3, "Give your project a short name (at least 3 characters).").max(100, "Keep the name under 100 characters."),
   idea: z.string().trim().min(20, "Tell us a little more — at least 20 characters.").max(5000, "Please keep this under 5,000 characters."),
 });
+
+const blankToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
 
 const milestoneSchema = z.object({
   title: z.string().trim().min(3, "Name this milestone (at least 3 characters).").max(120, "Keep the name under 120 characters."),
@@ -29,8 +33,14 @@ const milestoneSchema = z.object({
         .min(1, "Add at least one line describing what “done” means.")
         .max(10, "Use at most 10 lines."),
     ),
-  amount: z.coerce.number({ error: "Enter an amount." }).int("Use a whole number.").min(1, "The amount must be at least 1.").max(1_000_000, "That amount is too large."),
-  durationDays: z.coerce.number({ error: "Enter a number of days." }).int("Use whole days.").min(1, "At least 1 day.").max(365, "Split anything over a year into more milestones."),
+  amount: z.preprocess(
+    blankToUndefined,
+    z.coerce.number({ error: "Enter an amount." }).int("Use a whole number.").min(1, "The amount must be at least 1.").max(1_000_000, "That amount is too large."),
+  ),
+  durationDays: z.preprocess(
+    blankToUndefined,
+    z.coerce.number({ error: "Enter a number of days." }).int("Use whole days.").min(1, "At least 1 day.").max(365, "Split anything over a year into more milestones."),
+  ),
 });
 
 function fieldErrors(error: z.ZodError): Record<string, string> {
@@ -168,6 +178,7 @@ export async function publishProject(projectId: string): Promise<FormState> {
   const p = await editableProject(projectId);
   const ms = await db.select({ id: milestone.id }).from(milestone).where(eq(milestone.projectId, p.id));
   if (ms.length === 0) return { error: "Add at least one milestone before finding a developer." };
+  if (p.skills.length === 0) return { error: "Pick at least one skill this project needs, so we can match you." };
 
   await db.update(project).set({ status: "open", updatedAt: new Date() }).where(eq(project.id, p.id));
   redirect(`/projects/${p.id}/matches`);
@@ -220,6 +231,7 @@ export async function writePlanWithAi(projectId: string, _: FormState, formData:
     tx.update(project)
       .set({
         summary: plan.summary,
+        skills: plan.skills,
         aiGenerations: p.aiGenerations + 1,
         aiQuestions: plan.questions.map((question) => ({ question })),
         updatedAt: new Date(),
@@ -229,4 +241,39 @@ export async function writePlanWithAi(projectId: string, _: FormState, formData:
   });
   refresh();
   return { ok: true };
+}
+
+// ── Skills & invitations (step 5) ─────────────────────────────────
+
+export async function setProjectSkills(projectId: string, _: FormState, formData: FormData): Promise<FormState> {
+  await editableProject(projectId);
+  const skills = cleanSkills(formData.getAll("skills"));
+  if (skills.length > 6) return { error: "Pick up to 6 skills — the most important ones." };
+  await db.update(project).set({ skills, updatedAt: new Date() }).where(eq(project.id, projectId));
+  refresh();
+  return { ok: true };
+}
+
+export async function inviteDeveloper(projectId: string, developerId: string): Promise<FormState> {
+  const p = await ownedProject(projectId);
+  if (p.status !== "open") return { error: "You can only invite developers while you're still choosing one." };
+
+  // Re-check on the server: only developers who genuinely match can be invited.
+  const matches = await findMatches(p.id, p.skills, 200);
+  const match = matches.find((m) => m.developerId === developerId);
+  if (!match || match.score < MIN_SCORE) return { error: "That developer isn't a match for this project." };
+  if (match.invitationStatus) return { error: "You've already invited this developer." };
+
+  await db.insert(invitation).values({ id: crypto.randomUUID(), projectId: p.id, developerId, score: match.score });
+  refresh();
+  return { ok: true };
+}
+
+export async function withdrawInvitation(invitationId: string) {
+  const [inv] = await db.select().from(invitation).where(eq(invitation.id, invitationId)).limit(1);
+  if (!inv) throw new Error("Invitation not found");
+  await ownedProject(inv.projectId);
+  if (inv.status !== "pending") return;
+  await db.update(invitation).set({ status: "withdrawn", respondedAt: new Date(), updatedAt: new Date() }).where(eq(invitation.id, inv.id));
+  refresh();
 }

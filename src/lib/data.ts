@@ -1,4 +1,4 @@
-// Sample data used by the UI until the database (step 3) is in place.
+// Sample plan shown in the landing page preview card.
 // Money and rates are placeholders on purpose — set real values later.
 
 export type MilestoneStatus = "paid" | "awaiting" | "in_qa" | "upcoming" | "unfunded";
@@ -64,82 +64,3 @@ export const samplePlan = {
     },
   ] as Milestone[],
 };
-
-export type Candidate = {
-  initials: string;
-  first: string;
-  name: string;
-  role: string;
-  where: string;
-  available: string;
-  why: string[];
-  gap: string;
-  proof: string[];
-};
-
-export const candidates: Candidate[] = [
-  {
-    initials: "AO",
-    first: "Amara",
-    name: "Amara Okafor",
-    role: "AI engineer · LLM apps & RAG",
-    where: "Lagos · GMT+1",
-    available: "Available in 3 days",
-    why: [
-      "Built 3 support chatbots on company documents (RAG)",
-      "Shipped a WhatsApp Business API integration",
-      "Has built human hand-off to a staff inbox before",
-    ],
-    gap: "No analytics dashboards yet — milestone 4 may take longer",
-    proof: ["Retail FAQ bot — live demo", "WhatsApp order assistant — repo"],
-  },
-  {
-    initials: "DR",
-    first: "Daniel",
-    name: "Daniel Reyes",
-    role: "Full-stack developer · AI integrations",
-    where: "Mexico City · GMT−6",
-    available: "Available now",
-    why: [
-      "Built embeddable chat widgets for 2 e-commerce stores",
-      "Strong analytics and dashboard work",
-      "Integrated an LLM API with a store inventory system",
-    ],
-    gap: "WhatsApp would be his first — expect extra time on milestone 3",
-    proof: ["Store chat widget — live demo", "Sales dashboard — repo"],
-  },
-  {
-    initials: "PN",
-    first: "Priya",
-    name: "Priya Nair",
-    role: "AI product engineer",
-    where: "Bengaluru · GMT+5:30",
-    available: "Available in 1 week",
-    why: [
-      "Led a full support-bot build from spec to launch",
-      "Covers all 4 milestones, including analytics",
-      "Writes clear weekly progress updates",
-    ],
-    gap: "Less overlap with your working hours",
-    proof: ["Helpdesk assistant — case study", "Bot analytics — live demo"],
-  },
-];
-
-export const invitations = [
-  {
-    title: "Order-tracking assistant",
-    client: "Online grocery store",
-    milestones: 3,
-    summary:
-      "A chatbot that tells customers where their order is, using the store's delivery system, on the website and WhatsApp.",
-    why: "WhatsApp + RAG chatbots shipped",
-  },
-  {
-    title: "Internal HR policy bot",
-    client: "Logistics company",
-    milestones: 2,
-    summary:
-      "Staff ask questions about leave, payroll dates and benefits; the bot answers from the HR handbook and flags anything it can't answer.",
-    why: "Knowledge-base bots shipped",
-  },
-];

@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { milestone, project, type Milestone, type Project } from "@/db/schema";
+import { developerProfile, invitation, milestone, project, user, type Milestone, type Project } from "@/db/schema";
 
 export type ProjectWithMilestones = Project & { milestones: Milestone[] };
 
@@ -68,3 +68,21 @@ export const milestoneStatusLabel: Record<Milestone["status"], string> = {
   changes_requested: "Changes requested",
   paid: "✓ QA passed · Paid",
 };
+
+/** Invitations a business owner has sent for one project, with the developer's name. */
+export async function listInvitationsForProject(projectId: string) {
+  return db
+    .select({
+      id: invitation.id,
+      status: invitation.status,
+      score: invitation.score,
+      developerId: invitation.developerId,
+      name: user.name,
+      headline: developerProfile.headline,
+    })
+    .from(invitation)
+    .innerJoin(user, eq(user.id, invitation.developerId))
+    .leftJoin(developerProfile, eq(developerProfile.userId, invitation.developerId))
+    .where(eq(invitation.projectId, projectId))
+    .orderBy(desc(invitation.createdAt));
+}

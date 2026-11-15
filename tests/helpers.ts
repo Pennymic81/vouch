@@ -62,3 +62,64 @@ export const sampleMilestones: MilestoneInput[] = [
   { title: "Chat widget on your website", criteria: ["Works on every page and on phones"], amount: 600, days: 5 },
   { title: "WhatsApp and hand-off to staff", criteria: ["Same answers on WhatsApp", "Hard questions go to a staff inbox"], amount: 1200, days: 10 },
 ];
+
+/** Ticks skills in a SkillPicker inside the given form (or the page). */
+export async function pickSkills(scope: Page | import("@playwright/test").Locator, skills: string[]) {
+  for (const s of skills) await scope.getByRole("checkbox", { name: s, exact: true }).check({ force: true });
+}
+
+/** Saves the project's skills on the plan page. */
+export async function setProjectSkills(page: Page, skills: string[]) {
+  const form = page.getByRole("form", { name: "Skills needed" });
+  await pickSkills(form, skills);
+  await form.getByRole("button", { name: "Save skills" }).click();
+  await expect(form.getByRole("status")).toContainText("Skills saved");
+}
+
+export type DevSetup = {
+  name: string;
+  headline?: string;
+  rate?: number;
+  skills: string[];
+  available?: boolean;
+  proofs?: { title: string; skills: string[] }[];
+};
+
+/** Signs up a developer in a fresh browser context and fills in their profile and proof. */
+export async function createDeveloper(browser: import("@playwright/test").Browser, d: DevSetup) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  page.on("dialog", (x) => x.accept());
+  const account = await signUpViaApi(page, "developer", d.name);
+  await page.goto("/dashboard/profile");
+  const form = page.getByRole("form", { name: "Your profile" });
+  await form.getByLabel("Headline").fill(d.headline ?? `${d.name} · builds things that work`);
+  await form.getByLabel("Hourly rate (USD)").fill(String(d.rate ?? 50));
+  await pickSkills(form, d.skills);
+  if (d.available === false) await form.getByLabel("Available for new projects").uncheck();
+  await form.getByRole("button", { name: /Create profile|Save profile/ }).click();
+  await expect(form.getByRole("status")).toContainText("Profile saved");
+
+  for (const p of d.proofs ?? []) {
+    const pf = page.getByRole("form", { name: "Add shipped work" });
+    await pf.getByLabel("What you built").fill(p.title);
+    await pf.getByLabel(/Link/).fill(`https://example.com/${encodeURIComponent(p.title)}`);
+    await pickSkills(pf, p.skills);
+    await pf.getByRole("button", { name: "Add to my proof" }).click();
+    await expect(page.getByRole("list", { name: "Your shipped work" }).getByRole("heading", { name: p.title })).toBeVisible();
+  }
+  return { context, page, ...account };
+}
+
+/** Signs in a client, writes a plan with the AI stand-in, publishes it, and returns the project id. */
+export async function publishedProject(page: Page, title: string) {
+  await signUpViaApi(page, "client");
+  const id = await createProject(page, title);
+  await page.getByRole("button", { name: "Write my plan with AI" }).click();
+  await expect(page.getByTestId("total-milestones")).toHaveText("3");
+  await page.getByRole("button", { name: "Approve plan & find matches" }).click();
+  await expect(page).toHaveURL(`/projects/${id}/matches`);
+  // Other tests add developers too, so view every match rather than the top 10.
+  await page.goto(`/projects/${id}/matches?all=1`);
+  return id;
+}

@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { SKILLS } from "@/lib/skills";
 
 // ── Shapes ────────────────────────────────────────────────────────
 
@@ -9,6 +10,7 @@ import { z } from "zod";
 const aiPlanShape = z.object({
   summary: z.string().describe("One or two plain-English sentences a non-technical owner understands."),
   bestFit: z.enum(["developer", "AI engineer", "full-stack developer", "mobile developer"]),
+  skills: z.array(z.enum(SKILLS)).describe("2–5 skills from the list that the work needs most, most important first."),
   milestones: z
     .array(
       z.object({
@@ -30,6 +32,7 @@ const aiPlanShape = z.object({
 export const planSchema = z.object({
   summary: z.string().trim().min(10).max(600),
   bestFit: z.string(),
+  skills: z.array(z.enum(SKILLS)).min(1).max(6),
   milestones: z
     .array(
       z.object({
@@ -129,6 +132,7 @@ function normalise(raw: unknown) {
       days: Math.max(1, Math.round(Number(m.days) || 0)),
     })),
     questions: (r.questions ?? []).filter((q) => q && q.trim()).slice(0, 3),
+    skills: [...new Set(r.skills ?? [])].slice(0, 6),
   };
 }
 
@@ -140,6 +144,9 @@ function fakePlan({ title, answers }: PlanInput): GeneratedPlan {
   return {
     summary: `A plan for “${title}”, split into checkable milestones.`,
     bestFit: "AI engineer",
+    skills: answered
+      ? ["AI chatbots", "Knowledge base / RAG", "Website chat widget", "WhatsApp integration"]
+      : ["AI chatbots", "Knowledge base / RAG", "Website chat widget"],
     milestones: [
       { title: "Collect your content and rules", criteria: ["Your policies are loaded", "Answers 20 agreed test questions"], amountUsd: 700, days: 6 },
       { title: "Website chat widget", criteria: ["Appears on every page", "Works on phones"], amountUsd: 500, days: 4 },

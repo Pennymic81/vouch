@@ -9,14 +9,11 @@ type Tab = { href: string; label: string; key: string };
 const clientTabs: Tab[] = [
   { key: "projects", href: "/projects", label: "Projects" },
   { key: "new", href: "/projects/new", label: "New project" },
-  { key: "messages", href: "#", label: "Messages" },
 ];
 
 const developerTabs: Tab[] = [
   { key: "dashboard", href: "/dashboard", label: "Dashboard" },
-  { key: "invitations", href: "#", label: "Invitations" },
-  { key: "earnings", href: "#", label: "Earnings" },
-  { key: "profile", href: "#", label: "Profile & proof" },
+  { key: "profile", href: "/dashboard/profile", label: "Profile & proof" },
 ];
 
 async function CurrentUser() {

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addMilestone, createProject, sampleMilestones, signUpViaApi, signUpViaForm } from "./helpers";
+import { addMilestone, createProject, sampleMilestones, setProjectSkills, signUpViaApi, signUpViaForm } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   page.on("dialog", (d) => d.accept()); // confirm() prompts for deletes
@@ -17,6 +17,7 @@ test.describe("starting a project", () => {
     const id = await createProject(page, "Furniture store chatbot");
     await expect(page.getByRole("heading", { level: 1, name: "Furniture store chatbot" })).toBeVisible();
     for (const m of sampleMilestones) await addMilestone(page, m);
+    await setProjectSkills(page, ["AI chatbots", "WhatsApp integration"]);
 
     await page.getByRole("button", { name: "Approve plan & find matches" }).click();
     await expect(page).toHaveURL(`/projects/${id}/matches`);
@@ -125,14 +126,20 @@ test.describe("building the plan", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Store helper bot" })).toBeVisible();
   });
 
-  test("you can't publish an empty plan", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "Approve plan & find matches" })).toBeDisabled();
-    await expect(page.getByText("Add at least one milestone first.")).toBeVisible();
+  test("you can't publish without milestones and skills", async ({ page }) => {
+    const publish = page.getByRole("button", { name: "Approve plan & find matches" });
+    await expect(publish).toBeDisabled();
+    await expect(page.getByText("Add at least one milestone and pick the skills it needs first.")).toBeVisible();
+    await addMilestone(page, sampleMilestones[0]);
+    await expect(publish).toBeDisabled();
+    await setProjectSkills(page, ["AI chatbots"]);
+    await expect(publish).toBeEnabled();
   });
 
   test("a published plan is locked from editing", async ({ page }) => {
     const id = page.url().split("/").at(-2);
     await addMilestone(page, sampleMilestones[0]);
+    await setProjectSkills(page, ["AI chatbots"]);
     await page.getByRole("button", { name: "Approve plan & find matches" }).click();
     await expect(page).toHaveURL(`/projects/${id}/matches`);
     await page.goto(`/projects/${id}/plan`);

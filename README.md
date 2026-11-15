@@ -34,8 +34,6 @@ Business owners create projects and build their plans, all saved in the database
 - `/projects/[id]` — the workspace with milestones, statuses and budget
 - Every read and change checks the project belongs to the signed-in business owner; inputs are validated on the server with zod and backed by database constraints
 
-Matches are still example developers until real matching (step 5).
-
 ## AI scoping (step 4)
 
 On the plan page, **Write my plan with AI** reads the owner's description and drafts a summary, 3–6 milestones with testable "done" checks, prices and days, plus up to 3 clarifying questions. Answering them and pressing **Update plan with my answers** rewrites the plan.
@@ -45,6 +43,15 @@ On the plan page, **Write my plan with AI** reads the owner's description and dr
 - Rewrites replace the current milestones (after a confirmation) and are limited to 10 per project
 - The owner can edit, reorder or delete any AI milestone afterwards
 - Tests use a predictable stand-in (`AI_FAKE=1`), so they never call the real API
+
+## Matching (step 5)
+
+- **Developers** fill in `/dashboard/profile`: headline, bio, rate, availability, skills, and "shipped work" proof links tagged with the skills they show
+- **Projects** list the skills they need (the AI suggests them; owners can change them). Both sides use one shared skill list (`src/lib/skills.ts`)
+- **Scoring** (`src/lib/matching.ts`, 0–100): up to 50 for listing the needed skills, up to 40 for proof showing them, up to 10 for more than one relevant piece of proof. Developers who aren't available or have no proof aren't matched; scores under 25 are hidden
+- Each match explains itself: **why they fit** (which shipped work shows which skill) and **gaps**
+- **Invitations**: owners invite matches; developers read the full plan at `/dashboard/invitations/[id]` and accept or decline. The first to accept joins the project (status → in progress) and other pending invitations close. Owners can withdraw pending invitations
+- Invites are re-checked on the server, and invitations are only visible to the developer they were sent to
 
 ## Tests
 
@@ -60,6 +67,7 @@ npm run test:ui                   # interactive runner
 - `tests/auth.spec.ts` — sign-up per role, duplicate emails, password rules, sign-in/out, wrong passwords, protected pages, role separation, safe redirects, forged cookies
 - `tests/projects.spec.ts` — full journey from landing page to published plan, plan editing (add, edit, reorder, delete, totals), server-side validation, publishing rules, privacy between accounts
 - `tests/ai.spec.ts` — AI writes a plan, answering its questions updates it, rewrites replace hand-made milestones, editing AI milestones, the 10-rewrite limit, locked after publishing
+- `tests/matching.spec.ts` — profile and proof validation, profile strength, ranking with reasons and gaps, who is left out, invite → accept → joins project, decline, withdraw, top-10 with "show all", invitation privacy
 - `tests/flows.spec.ts` — milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
@@ -92,6 +100,6 @@ Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and
 2. ~~Accounts (business owner / developer roles)~~ ✓
 3. ~~Projects and plans saved in the database~~ ✓
 4. ~~AI scoping~~ ✓
-5. Matching
+5. ~~Matching~~ ✓
 6. Milestones & QA flow
 7. Escrow payments

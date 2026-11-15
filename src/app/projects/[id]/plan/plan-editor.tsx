@@ -3,12 +3,14 @@
 import { useActionState, useState, useTransition } from "react";
 import { Button, inputClass } from "@/components/ui";
 import { FieldError, FormAlert } from "@/components/form-bits";
+import { SkillPicker } from "@/components/skill-picker";
 import {
   addMilestone,
   deleteMilestone,
   deleteProject,
   moveMilestone,
   publishProject,
+  setProjectSkills,
   updateMilestone,
   updateProjectDetails,
   type FormState,
@@ -217,9 +219,25 @@ export function PublishBar({ projectId, canPublish }: { projectId: string; canPu
           >
             {pending ? "Publishing…" : "Approve plan & find matches"}
           </Button>
-          {!canPublish && <span id="publish-hint" className="text-sm text-muted">Add at least one milestone first.</span>}
+          {!canPublish && <span id="publish-hint" className="text-sm text-muted">Add at least one milestone and pick the skills it needs first.</span>}
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Skills (step 5) ───────────────────────────────────────────────
+
+export function SkillsForm({ projectId, skills }: { projectId: string; skills: string[] }) {
+  const [state, action, pending] = useActionState(setProjectSkills.bind(null, projectId), undefined);
+  return (
+    <form action={action} aria-label="Skills needed" className="flex flex-col gap-3">
+      <SkillPicker selected={skills} legend="Skills this project needs" hint="Used to match you with developers — pick up to 6" />
+      <FormAlert>{state?.error}</FormAlert>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="dark" size="sm" disabled={pending}>{pending ? "Saving…" : "Save skills"}</Button>
+        {state?.ok && !pending && <span role="status" className="text-sm font-semibold text-brand-dark">✓ Skills saved</span>}
+      </div>
+    </form>
   );
 }

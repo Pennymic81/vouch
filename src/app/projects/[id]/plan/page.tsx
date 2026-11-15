@@ -6,7 +6,7 @@ import { Stepper } from "@/components/stepper";
 import { ShieldIcon } from "@/components/icons";
 import { getSession } from "@/lib/session";
 import { formatDays, formatMoney, getProjectForClient, totalsOf } from "@/lib/projects";
-import { MilestoneEditor, NewMilestoneForm, ProjectDetailsForm, PublishBar } from "./plan-editor";
+import { MilestoneEditor, NewMilestoneForm, ProjectDetailsForm, PublishBar, SkillsForm } from "./plan-editor";
 import { AiPanel } from "./ai-panel";
 import { MAX_AI_GENERATIONS, aiConfigured } from "@/lib/ai/plan";
 
@@ -93,7 +93,11 @@ async function Plan({ params }: { params: Promise<{ id: string }> }) {
             <span>Each milestone is tested against these criteria by a Vouch QA reviewer before any payment is released. Your developer sees and agrees to the same plan.</span>
           </div>
 
-          <PublishBar projectId={p.id} canPublish={p.milestones.length > 0} />
+          <div className="rounded-[14px] border border-line p-5">
+            <SkillsForm key={p.aiGenerations} projectId={p.id} skills={p.skills} />
+          </div>
+
+          <PublishBar projectId={p.id} canPublish={p.milestones.length > 0 && p.skills.length > 0} />
         </section>
       </div>
     </main>

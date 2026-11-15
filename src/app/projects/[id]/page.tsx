@@ -12,9 +12,13 @@ import {
   formatMoney,
   getProjectForClient,
   milestoneStatusLabel,
+  listInvitationsForProject,
   projectStatusLabel,
   totalsOf,
 } from "@/lib/projects";
+import { initialsOf } from "@/lib/session";
+import { Avatar } from "@/components/ui";
+import { WithdrawButton } from "./withdraw-button";
 import type { Milestone } from "@/db/schema";
 
 export const metadata: Metadata = { title: "Project" };
@@ -37,6 +41,8 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
   if (p.status === "draft") redirect(`/projects/${p.id}/plan`);
 
   const t = totalsOf(p.milestones);
+  const invites = await listInvitationsForProject(p.id);
+  const hired = invites.find((i) => i.status === "accepted");
   const paid = p.milestones.filter((m) => m.status === "paid").reduce((s, m) => s + m.amount, 0);
 
   return (
@@ -58,11 +64,44 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
       <div className="flex flex-wrap items-start gap-7">
         <div className="flex min-w-0 flex-[999_1_620px] flex-col gap-5">
           {p.status === "open" && (
-            <section className="flex flex-col gap-2 rounded-[18px] border-2 border-alert-light bg-white p-6">
-              <h2 className="text-xl font-bold">Next: choose your developer</h2>
-              <p className="text-[15px] leading-relaxed text-body">
-                Your plan is published. Pick someone from your matches — they&apos;ll see the same milestones and agree to them before any work starts.
-              </p>
+            <section aria-labelledby="choose-h" className="flex flex-col gap-4 rounded-[18px] border-2 border-alert-light bg-white p-6">
+              <div className="flex flex-col gap-1.5">
+                <h2 id="choose-h" className="text-xl font-bold">Next: choose your developer</h2>
+                <p className="text-[15px] leading-relaxed text-body">
+                  Invite people from your matches. The first to accept joins the project and agrees to these exact milestones.
+                </p>
+              </div>
+              {invites.length > 0 && (
+                <ul aria-label="Invitations sent" className="flex flex-col gap-2.5">
+                  {invites.map((iv) => (
+                    <li key={iv.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
+                      <span className="flex items-center gap-3">
+                        <Avatar initials={initialsOf(iv.name)} size="sm" />
+                        <span className="font-semibold">{iv.name}</span>
+                        <span className="text-sm text-muted">{iv.score}% match</span>
+                      </span>
+                      {iv.status === "pending" ? (
+                        <span className="flex items-center gap-3">
+                          <StatusBadge tone="alert">Waiting for reply</StatusBadge>
+                          <WithdrawButton invitationId={iv.id} name={iv.name} />
+                        </span>
+                      ) : (
+                        <StatusBadge tone="neutral">{iv.status === "declined" ? "Declined" : "Withdrawn"}</StatusBadge>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+          {hired && (
+            <section aria-labelledby="dev-h" className="flex flex-wrap items-center gap-4 rounded-[18px] border-2 border-brand bg-white p-6">
+              <Avatar initials={initialsOf(hired.name)} size="lg" />
+              <div className="flex flex-col gap-1">
+                <h2 id="dev-h" className="text-xl font-bold">{hired.name} is building this</h2>
+                {hired.headline && <span className="text-[15px] text-body">{hired.headline}</span>}
+                <span className="text-sm text-muted">Accepted your plan · {hired.score}% match</span>
+              </div>
             </section>
           )}
           <Card className="flex flex-col gap-4 p-6 md:p-7">
