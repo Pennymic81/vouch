@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppHeader } from "@/components/app-header";
+import { Protected } from "@/components/protected";
 import { AlertIcon, ShieldIcon } from "@/components/icons";
 import { Button, ButtonLink, Card, inputClass } from "@/components/ui";
 import { samplePlan } from "@/lib/data";
@@ -13,6 +14,7 @@ export default function NewProjectPage() {
   return (
     <>
       <AppHeader active="new" />
+      <Protected role="client" returnTo="/projects/new">
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 pb-20 pt-10">
         <Stepper current={2} />
         <div className="flex flex-wrap items-start gap-7">
@@ -99,6 +101,7 @@ export default function NewProjectPage() {
           </Card>
         </div>
       </main>
+      </Protected>
     </>
   );
 }

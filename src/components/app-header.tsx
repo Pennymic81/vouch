@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Logo } from "./logo";
+import { UserMenu } from "./user-menu";
+import { getSession, initialsOf } from "@/lib/session";
 
 type Tab = { href: string; label: string; key: string };
 
@@ -16,6 +19,19 @@ const developerTabs: Tab[] = [
   { key: "profile", href: "#", label: "Profile & proof" },
 ];
 
+async function CurrentUser() {
+  const session = await getSession();
+  if (!session) return <AvatarPlaceholder />;
+  const { name, email, role } = session.user;
+  return (
+    <UserMenu name={name} email={email} initials={initialsOf(name)} role={role === "developer" ? "developer" : "client"} />
+  );
+}
+
+function AvatarPlaceholder() {
+  return <span aria-hidden="true" className="inline-block size-10 rounded-full bg-slate-100" />;
+}
+
 export function AppHeader({
   role = "client",
   active,
@@ -28,15 +44,11 @@ export function AppHeader({
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-6 py-3.5">
         <Logo size={28} textClass="text-xl" />
-        <button
-          type="button"
-          aria-label="AO, account menu"
-          className={`order-2 inline-flex size-10 items-center justify-center rounded-full font-bold md:order-3 ${
-            role === "client" ? "bg-brand-tint text-brand-dark" : "bg-orange-100 text-alert-dark"
-          }`}
-        >
-          AO
-        </button>
+        <div className="order-2 md:order-3">
+          <Suspense fallback={<AvatarPlaceholder />}>
+            <CurrentUser />
+          </Suspense>
+        </div>
         <nav
           aria-label="App"
           className="order-3 flex basis-full gap-1.5 overflow-x-auto whitespace-nowrap text-[15px] font-medium md:order-2 md:mr-auto md:basis-auto"

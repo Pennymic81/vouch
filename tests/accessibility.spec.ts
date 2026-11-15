@@ -1,23 +1,34 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { signUpViaApi, type Role } from "./helpers";
 
-const paths = ["/", "/signup", "/projects/new", "/projects/new/matches", "/projects/support-chatbot", "/dashboard"];
+const cases: { path: string; role?: Role }[] = [
+  { path: "/" },
+  { path: "/signup" },
+  { path: "/signin" },
+  { path: "/projects/new", role: "client" },
+  { path: "/projects/new/matches", role: "client" },
+  { path: "/projects/support-chatbot", role: "client" },
+  { path: "/dashboard", role: "developer" },
+];
 
-for (const path of paths) {
+for (const { path, role } of cases) {
   test(`${path} has no WCAG A/AA accessibility violations`, async ({ page }) => {
+    if (role) await signUpViaApi(page, role);
     await page.goto(path);
+    await page.locator("h1").waitFor();
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
     const summary = results.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`);
     expect(summary).toEqual([]);
   });
-}
 
-test("every page has exactly one h1", async ({ page }) => {
-  for (const path of paths) {
+  test(`${path} has exactly one h1`, async ({ page }) => {
+    if (role) await signUpViaApi(page, role);
     await page.goto(path);
-    await expect(page.locator("h1"), path).toHaveCount(1);
-  }
-});
+    await page.locator("h1").first().waitFor();
+    await expect(page.locator("h1")).toHaveCount(1);
+  });
+}
 
 test("buttons and links are big enough to tap on phones", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone check");

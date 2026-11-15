@@ -8,9 +8,20 @@ Vouch links business owners who aren't technical with proven developers and AI e
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
-npm run build   # production build
+cp .env.example .env   # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+npm run dev            # http://localhost:3000
+npm run build          # production build
 ```
+
+The SQLite database (`vouch.db`) is created and migrated automatically on first run.
+
+## Accounts (step 2)
+
+- Email + password sign-up and sign-in with [Better Auth](https://better-auth.com), stored with [Drizzle ORM](https://orm.drizzle.team)
+- Two roles chosen at sign-up: **business owner** (`client`) and **developer / AI engineer** (`developer`)
+- Business-owner pages (`/projects/*`) and the developer dashboard (`/dashboard`) require the right role; signed-out visitors go to `/signin` and come back afterwards
+- Roles are checked on the server and by a database constraint, and can't be changed after sign-up
+- Database schema: `src/db/schema.ts` · migrations: `drizzle/` (`npx drizzle-kit generate` after schema changes)
 
 ## Tests
 
@@ -23,6 +34,7 @@ npm run test:ui                   # interactive runner
 ```
 
 - `tests/pages.spec.ts` — every page loads, has its heading and title, no console errors, no sideways scrolling, 404 works
+- `tests/auth.spec.ts` — sign-up per role, duplicate emails, password rules, sign-in/out, wrong passwords, protected pages, role separation, safe redirects, forged cookies
 - `tests/flows.spec.ts` — business-owner journey, milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
@@ -34,6 +46,7 @@ GitHub Actions runs lint and the full suite on every push and pull request.
 |---|---|
 | `/` | Landing page |
 | `/signup` | Sign up (business owner or developer) |
+| `/signin` | Sign in |
 | `/projects/new` | AI scoping — idea → plan with milestones |
 | `/projects/new/matches` | Matched developers with "why they fit" |
 | `/projects/support-chatbot` | Client project workspace (QA review, escrow, change requests) |
@@ -49,7 +62,7 @@ Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and
 
 ## Next steps
 
-2. Accounts (business owner / developer roles)
+2. ~~Accounts (business owner / developer roles)~~ ✓
 3. Database — projects, milestones, matches (Postgres + Prisma)
 4. AI scoping
 5. Matching

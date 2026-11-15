@@ -87,7 +87,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <ButtonLink href="/projects/new" size="lg">Start your project</ButtonLink>
-                <ButtonLink href="/signup" size="lg" variant="secondary">Join as a developer</ButtonLink>
+                <ButtonLink href="/signup?role=developer" size="lg" variant="secondary">Join as a developer</ButtonLink>
               </div>
               <ul className="flex flex-wrap gap-6 text-[15px] font-medium text-body">
                 <li className="flex items-center gap-2"><LockIcon className="size-[18px] text-brand" />Payments held in escrow</li>

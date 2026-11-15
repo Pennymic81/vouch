@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppHeader } from "@/components/app-header";
+import { Protected } from "@/components/protected";
 import { Avatar, Button, Card, Pill } from "@/components/ui";
 import { Check, LockIcon } from "@/components/icons";
 import { samplePlan, type MilestoneStatus } from "@/lib/data";
@@ -21,6 +22,7 @@ export default function ProjectPage() {
   return (
     <>
       <AppHeader active="projects" />
+      <Protected role="client" returnTo="/projects/support-chatbot">
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-7 px-6 pb-20 pt-9">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="flex flex-col gap-2">
@@ -115,6 +117,7 @@ export default function ProjectPage() {
           </aside>
         </div>
       </main>
+      </Protected>
     </>
   );
 }

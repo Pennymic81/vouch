@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { signUpViaApi, signUpViaForm } from "./helpers";
 
 test.describe("business owner journey", () => {
-  test("landing → plan → matches → project workspace", async ({ page }) => {
+  test("landing → sign up → plan → matches → project workspace", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Start your project" }).first().click();
+    await expect(page).toHaveURL(/\/signin\?next=%2Fprojects%2Fnew/);
+    await page.getByRole("link", { name: "Create an account" }).click();
+
+    await signUpViaForm(page, "client", "Ada Obi");
     await expect(page).toHaveURL("/projects/new");
     await expect(page.getByRole("heading", { name: "Customer support chatbot" })).toBeVisible();
 
@@ -17,6 +22,7 @@ test.describe("business owner journey", () => {
   });
 
   test("the plan lists every milestone with acceptance criteria", async ({ page }) => {
+    await signUpViaApi(page, "client");
     await page.goto("/projects/new");
     const milestones = page.locator("ol").filter({ hasText: "Knowledge base & FAQ import" }).locator("> li");
     await expect(milestones).toHaveCount(4);
@@ -26,6 +32,7 @@ test.describe("business owner journey", () => {
   });
 
   test("each match explains why they fit and shows proof", async ({ page }) => {
+    await signUpViaApi(page, "client");
     await page.goto("/projects/new/matches");
     for (const first of ["Amara", "Daniel", "Priya"]) {
       await expect(page.getByRole("heading", { name: `Why ${first} fits` })).toBeVisible();
@@ -35,10 +42,13 @@ test.describe("business owner journey", () => {
 });
 
 test.describe("milestone review", () => {
-  test("approving releases payment and can be undone", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await signUpViaApi(page, "client");
     await page.goto("/projects/support-chatbot");
-    await expect(page.getByText("Needs your review · 4 days left")).toBeVisible();
+  });
 
+  test("approving releases payment and can be undone", async ({ page }) => {
+    await expect(page.getByText("Needs your review · 4 days left")).toBeVisible();
     await page.getByRole("button", { name: "Approve & release payment" }).click();
     await expect(page.getByText("✓ Approved · payment released")).toBeVisible();
     await expect(page.getByRole("status")).toContainText("Payment released to Amara");
@@ -48,53 +58,9 @@ test.describe("milestone review", () => {
   });
 
   test("requesting changes keeps the money in escrow", async ({ page }) => {
-    await page.goto("/projects/support-chatbot");
     await page.getByRole("button", { name: "Request changes" }).click();
     await expect(page.getByText("Changes requested")).toBeVisible();
     await expect(page.getByRole("status")).toContainText("stays in escrow");
-  });
-});
-
-test.describe("sign up", () => {
-  test("business owners go to the project planner", async ({ page }) => {
-    await page.goto("/signup");
-    await expect(page.getByRole("radio", { name: /A business owner/ })).toBeChecked();
-    await expect(page.getByLabel(/Company/)).toBeVisible();
-
-    await page.getByLabel("Full name").fill("Ada Obi");
-    await page.getByLabel("Work email").fill("ada@example.com");
-    await page.getByLabel("Password").fill("supersecret");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL("/projects/new");
-  });
-
-  test("developers go to their dashboard", async ({ page }) => {
-    await page.goto("/signup");
-    await page.getByRole("radio", { name: /A developer or AI engineer/ }).check();
-    await expect(page.getByLabel(/Portfolio or GitHub/)).toBeVisible();
-
-    await page.getByLabel("Full name").fill("Tunde Bello");
-    await page.getByLabel("Work email").fill("tunde@example.com");
-    await page.getByLabel("Password").fill("supersecret");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL("/dashboard");
-  });
-
-  test("the form will not submit without the required fields", async ({ page }) => {
-    await page.goto("/signup");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL("/signup");
-    const valid = await page.getByLabel("Full name").evaluate((el: HTMLInputElement) => el.validity.valid);
-    expect(valid).toBe(false);
-  });
-
-  test("passwords shorter than 8 characters are rejected", async ({ page }) => {
-    await page.goto("/signup");
-    await page.getByLabel("Full name").fill("Ada Obi");
-    await page.getByLabel("Work email").fill("ada@example.com");
-    await page.getByLabel("Password").fill("short");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL("/signup");
   });
 });
 
@@ -123,6 +89,7 @@ test.describe("navigation", () => {
   });
 
   test("app header marks the current page", async ({ page }) => {
+    await signUpViaApi(page, "developer");
     await page.goto("/dashboard");
     await expect(page.getByRole("navigation", { name: "App" }).getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "aria-current",
@@ -130,7 +97,19 @@ test.describe("navigation", () => {
     );
   });
 
+  test("the account menu shows who is signed in and closes with Escape", async ({ page }) => {
+    await signUpViaApi(page, "developer", "Tunde Bello");
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: "TB, account menu" }).click();
+    const menu = page.getByRole("menu", { name: "Account" });
+    await expect(menu).toContainText("Tunde Bello");
+    await expect(menu).toContainText("Developer / AI engineer");
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+  });
+
   test("the logo always leads home", async ({ page }) => {
+    await signUpViaApi(page, "developer");
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Vouch" }).first().click();
     await expect(page).toHaveURL("/");

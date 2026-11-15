@@ -29,7 +29,7 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-3">
           <Link
-            href="/signup"
+            href="/signin"
             className="hidden px-4 py-3 text-[15px] font-semibold text-ink no-underline md:inline-flex"
           >
             Sign in
@@ -63,7 +63,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          <Link href="/signup" className="py-3.5 font-semibold text-brand-dark no-underline">
+          <Link href="/signin" className="py-3.5 font-semibold text-brand-dark no-underline">
             Sign in
           </Link>
         </nav>

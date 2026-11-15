@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3100;
+const baseURL = `http://localhost:${PORT}`;
 // Set CHROME_PATH to use an already-installed Chrome instead of Playwright's download.
 const executablePath = process.env.CHROME_PATH;
 
@@ -11,7 +12,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL,
     trace: "on-first-retry",
     launchOptions: executablePath ? { executablePath } : {},
   },
@@ -20,9 +21,16 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: `npm run build && npm run start -- -p ${PORT}`,
-    url: `http://localhost:${PORT}`,
+    // Fresh test database every run, then a production build.
+    command: `node -e "for (const f of ['test.db','test.db-wal','test.db-shm']) require('fs').rmSync(f,{force:true})" && npm run build && npm run start -- -p ${PORT}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
+    timeout: 240_000,
+    env: {
+      DATABASE_URL: "file:test.db",
+      BETTER_AUTH_URL: baseURL,
+      BETTER_AUTH_SECRET: "test-secret-only-for-e2e-0123456789abcdef",
+      E2E: "1",
+    },
   },
 });

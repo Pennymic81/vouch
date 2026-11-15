@@ -1,34 +1,46 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { signUpViaApi, type Role } from "./helpers";
 
-const pages = [
+type PageCase = { path: string; heading: string | RegExp; role?: Role };
+
+const pages: PageCase[] = [
   { path: "/", heading: "Get your project built — and know it's built right." },
   { path: "/signup", heading: "Create your account" },
-  { path: "/projects/new", heading: "Your idea" },
-  { path: "/projects/new/matches", heading: "3 matches for your chatbot" },
-  { path: "/projects/support-chatbot", heading: "Customer support chatbot" },
-  { path: "/dashboard", heading: "Good morning, Amara" },
+  { path: "/signin", heading: "Sign in to Vouch" },
+  { path: "/projects/new", heading: "Your idea", role: "client" },
+  { path: "/projects/new/matches", heading: "3 matches for your chatbot", role: "client" },
+  { path: "/projects/support-chatbot", heading: "Customer support chatbot", role: "client" },
+  { path: "/dashboard", heading: /^Welcome, Tunde$/, role: "developer" },
 ];
 
-for (const { path, heading } of pages) {
-  test.describe(`page ${path}`, () => {
+async function open(page: Page, c: PageCase) {
+  if (c.role) await signUpViaApi(page, c.role);
+  return page.goto(c.path);
+}
+
+for (const c of pages) {
+  test.describe(`page ${c.path}`, () => {
     test("loads with its heading and no console errors", async ({ page }) => {
       const errors: string[] = [];
       page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
       page.on("pageerror", (e) => errors.push(e.message));
 
-      const res = await page.goto(path);
+      const res = await open(page, c);
       expect(res?.status()).toBe(200);
-      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: c.heading, ...(typeof c.heading === "string" ? { exact: true } : {}) }),
+      ).toBeVisible();
       expect(errors).toEqual([]);
     });
 
     test("has a page title", async ({ page }) => {
-      await page.goto(path);
+      await open(page, c);
       await expect(page).toHaveTitle(/Vouch/);
     });
 
     test("does not scroll sideways", async ({ page }) => {
-      await page.goto(path);
+      await open(page, c);
+      await page.locator("h1").waitFor();
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );

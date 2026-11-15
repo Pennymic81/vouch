@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button, inputClass } from "@/components/ui";
+import { signUp } from "@/lib/auth-client";
+import { destinationFor } from "@/lib/next-url";
 
 type Role = "client" | "developer";
 
@@ -14,21 +16,47 @@ const roles: { value: Role; title: string; body: string }[] = [
 
 export function SignUpForm() {
   const router = useRouter();
-  const [role, setRole] = useState<Role>("client");
+  // Links like "Apply with your work" open this page with ?role=developer.
+  const params = useSearchParams();
+  const [role, setRole] = useState<Role>(params.get("role") === "developer" ? "developer" : "client");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const form = new FormData(e.currentTarget);
+    const extra = String(form.get("extra") ?? "").trim();
+    setPending(true);
+    const { error } = await signUp.email({
+      name: String(form.get("name")).trim(),
+      email: String(form.get("email")).trim(),
+      password: String(form.get("password")),
+      role,
+      ...(extra ? (role === "client" ? { company: extra } : { portfolioUrl: extra }) : {}),
+    });
+    if (error) {
+      setPending(false);
+      setError(
+        error.code === "USER_ALREADY_EXISTS" || error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+          ? "An account with this email already exists. Try signing in instead."
+          : (error.message ?? "Something went wrong. Please try again."),
+      );
+      return;
+    }
+    router.push(destinationFor(role));
+    router.refresh();
+  }
 
   return (
-    <form
-      className="flex w-full max-w-[560px] flex-col gap-7"
-      onSubmit={(e) => {
-        e.preventDefault();
-        // Accounts arrive in step 2 — for now, continue to the right side of the app.
-        router.push(role === "client" ? "/projects/new" : "/dashboard");
-      }}
-    >
+    <form className="flex w-full max-w-[560px] flex-col gap-7" onSubmit={onSubmit}>
       <div className="flex flex-col gap-2">
-        <h2 className="text-[30px] font-bold md:text-[34px]">Create your account</h2>
+        <h1 className="text-[30px] font-bold md:text-[34px]">Create your account</h1>
         <p className="text-base text-muted">
-          Already have one? <Link href="#" className="font-semibold text-brand underline underline-offset-2">Sign in</Link>
+          Already have one?{" "}
+          <Link href="/signin" className="font-semibold text-brand underline underline-offset-2">
+            Sign in
+          </Link>
         </p>
       </div>
 
@@ -73,9 +101,9 @@ export function SignUpForm() {
             <span className="text-[13px] font-normal text-muted">Optional</span>
           </span>
           <input
-            type="text"
+            type={role === "client" ? "text" : "url"}
             name="extra"
-            placeholder={role === "client" ? "Business name" : "github.com/you"}
+            placeholder={role === "client" ? "Business name" : "https://github.com/you"}
             className={inputClass}
           />
         </label>
@@ -86,20 +114,31 @@ export function SignUpForm() {
       </label>
       <label className="flex flex-col gap-2 text-[15px] font-semibold">
         Password
-        <input type="password" name="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" className={inputClass} />
+        <input
+          type="password"
+          name="password"
+          required
+          minLength={8}
+          maxLength={128}
+          autoComplete="new-password"
+          placeholder="At least 8 characters"
+          className={inputClass}
+        />
       </label>
 
-      <Button type="submit" size="lg" className="w-full">Create account</Button>
+      {error && (
+        <p role="alert" className="rounded-[10px] border border-alert-line bg-alert-soft px-4 py-3 text-[15px] text-alert-dark">
+          {error}
+        </p>
+      )}
 
-      <div className="flex items-center gap-3 text-sm text-muted">
-        <span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" />
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
-        <Button variant="secondary" className="rounded-xl py-3.5">Continue with Google</Button>
-        <Button variant="secondary" className="rounded-xl py-3.5">Continue with GitHub</Button>
-      </div>
+      <Button type="submit" size="lg" className="w-full disabled:opacity-70" disabled={pending}>
+        {pending ? "Creating your account…" : "Create account"}
+      </Button>
+
       <p className="text-[13px] leading-relaxed text-muted">
-        By creating an account you agree to the <Link href="#" className="text-brand underline underline-offset-2">Terms</Link> and{" "}
+        By creating an account you agree to the{" "}
+        <Link href="#" className="text-brand underline underline-offset-2">Terms</Link> and{" "}
         <Link href="#" className="text-brand underline underline-offset-2">Privacy Policy</Link>.
       </p>
     </form>

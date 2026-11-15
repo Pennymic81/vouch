@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
+import { Protected } from "@/components/protected";
 import { Stepper } from "@/components/stepper";
 import { Avatar, ButtonLink, Card, Pill } from "@/components/ui";
 import { Check } from "@/components/icons";
@@ -12,6 +13,7 @@ export default function MatchesPage() {
   return (
     <>
       <AppHeader active="new" />
+      <Protected role="client" returnTo="/projects/new/matches">
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-7 px-6 pb-20 pt-10">
         <Stepper current={3} />
         <div className="flex flex-wrap items-end justify-between gap-5">
@@ -87,6 +89,7 @@ export default function MatchesPage() {
           Not the right fit? <Link href="#" className="font-semibold text-brand">Ask for new matches</Link> — free, and nobody is notified.
         </p>
       </main>
+      </Protected>
     </>
   );
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { AppHeader } from "@/components/app-header";
+import { Protected } from "@/components/protected";
+import { firstNameOf, getSession } from "@/lib/session";
 import { Button, ButtonLink, Card, Pill } from "@/components/ui";
 import { invitations, samplePlan } from "@/lib/data";
 
@@ -19,14 +21,21 @@ const misses = [
 
 const ratingQuestions = ["Clear scope", "Response time", "Reviewed on time"];
 
+async function Greeting() {
+  const session = await getSession();
+  const first = session ? firstNameOf(session.user.name) : "there";
+  return <h1 className="text-[30px] font-bold md:text-[34px]">Welcome, {first}</h1>;
+}
+
 export default function DashboardPage() {
   return (
     <>
       <AppHeader role="developer" active="dashboard" />
+      <Protected role="developer" returnTo="/dashboard">
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-7 px-6 pb-20 pt-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-1.5">
-            <h1 className="text-[30px] font-bold md:text-[34px]">Good morning, Amara</h1>
+            <Greeting />
             <p className="text-[17px] text-body">1 milestone waiting on a client, {invitations.length} new invitations.</p>
           </div>
           <label className="flex items-center gap-2.5 text-[15px] font-semibold">
@@ -130,6 +139,7 @@ export default function DashboardPage() {
           </aside>
         </div>
       </main>
+      </Protected>
     </>
   );
 }
