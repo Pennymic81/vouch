@@ -139,6 +139,15 @@ export const milestone = sqliteTable(
     amount: integer("amount").notNull(),
     durationDays: integer("duration_days").notNull(),
     status: text("status", { enum: MILESTONE_STATUSES }).notNull().default("planned"),
+    fundedAt: integer("funded_at", { mode: "timestamp_ms" }),
+    submittedAt: integer("submitted_at", { mode: "timestamp_ms" }),
+    /** When QA passed — starts the owner's review window. */
+    qaPassedAt: integer("qa_passed_at", { mode: "timestamp_ms" }),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+    /** True when the owner didn't respond in time and approval happened automatically. */
+    autoApproved: integer("auto_approved", { mode: "boolean" }).notNull().default(false),
+    /** The owner's latest "please change…" note, shown to the developer. */
+    ownerFeedback: text("owner_feedback"),
     ...timestamps,
   },
   (t) => [
@@ -216,3 +225,62 @@ export const invitation = sqliteTable(
 export type DeveloperProfile = typeof developerProfile.$inferSelect;
 export type Proof = typeof proof.$inferSelect;
 export type Invitation = typeof invitation.$inferSelect;
+
+// ── Delivery & QA (step 6) ────────────────────────────────────────
+
+/** Each time a developer hands in a milestone (first try or after changes). */
+export const submission = sqliteTable(
+  "submission",
+  {
+    id: text("id").primaryKey(),
+    milestoneId: text("milestone_id")
+      .notNull()
+      .references(() => milestone.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    round: integer("round").notNull(),
+    note: text("note").notNull(),
+    demoUrl: text("demo_url").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("submission_milestone_idx").on(t.milestoneId)],
+);
+
+export type QaCheck = { criterion: string; passed: boolean; note?: string };
+
+/** A reviewer's verdict on one submission, criterion by criterion. */
+export const qaReview = sqliteTable(
+  "qa_review",
+  {
+    id: text("id").primaryKey(),
+    submissionId: text("submission_id")
+      .notNull()
+      .references(() => submission.id, { onDelete: "cascade" }),
+    reviewerId: text("reviewer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    checks: text("checks", { mode: "json" }).$type<QaCheck[]>().notNull(),
+    passed: integer("passed", { mode: "boolean" }).notNull(),
+    summary: text("summary").notNull().default(""),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("qa_review_submission_idx").on(t.submissionId)],
+);
+
+/** What happened on a project, newest first in the workspace. */
+export const activity = sqliteTable(
+  "activity",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    message: text("message").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("activity_project_idx").on(t.projectId)],
+);
+
+export type Submission = typeof submission.$inferSelect;
+export type QaReview = typeof qaReview.$inferSelect;

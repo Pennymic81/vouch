@@ -53,6 +53,23 @@ On the plan page, **Write my plan with AI** reads the owner's description and dr
 - **Invitations**: owners invite matches; developers read the full plan at `/dashboard/invitations/[id]` and accept or decline. The first to accept joins the project (status → in progress) and other pending invitations close. Owners can withdraw pending invitations
 - Invites are re-checked on the server, and invitations are only visible to the developer they were sent to
 
+## Milestones & QA (step 6)
+
+Each milestone moves through one path, enforced in one place (`src/lib/delivery.ts`):
+
+```
+planned ─fund─▶ funded ─submit─▶ in QA ─pass─▶ awaiting approval ─approve / auto─▶ paid
+                   ▲               │ fail              │ owner requests changes
+                   └──── changes requested ◀───────────┘   (developer fixes and resubmits)
+```
+
+- **Owner** (`/projects/[id]`) funds one milestone at a time, in order; sees each delivery, the QA report check by check, and approves or requests changes with a note
+- **Developer** (`/dashboard/projects/[id]`) hands in each milestone with a note and an `https://` demo link, and sees QA notes and the owner's feedback
+- **QA reviewers** (`/review`) are Vouch staff listed in `REVIEWER_EMAILS` (`*@domain` allowed). They mark every agreed check as passed or failed — a failed check needs a note — and can't review projects they're part of
+- If the owner doesn't respond within `REVIEW_WINDOW_DAYS` (default 5) after QA passes, the milestone is approved automatically
+- When every milestone is paid, the project is **completed**. Escrow amounts and an activity log are shown to both sides
+- Payments are simulated until step 7
+
 ## Tests
 
 End-to-end tests run in Playwright on desktop (1440px) and phone (Pixel 7) sizes:
@@ -68,7 +85,8 @@ npm run test:ui                   # interactive runner
 - `tests/projects.spec.ts` — full journey from landing page to published plan, plan editing (add, edit, reorder, delete, totals), server-side validation, publishing rules, privacy between accounts
 - `tests/ai.spec.ts` — AI writes a plan, answering its questions updates it, rewrites replace hand-made milestones, editing AI milestones, the 10-rewrite limit, locked after publishing
 - `tests/matching.spec.ts` — profile and proof validation, profile strength, ranking with reasons and gaps, who is left out, invite → accept → joins project, decline, withdraw, top-10 with "show all", invitation privacy
-- `tests/flows.spec.ts` — milestone approve / request changes / undo, sign-up routing and validation, desktop and phone menus, FAQ
+- `tests/delivery.spec.ts` — fund → deliver → QA → approve → paid, QA failure and resubmission, owner change requests, auto-approval, completing a project, validation and order rules, reviewer access and conflicts, developer privacy
+- `tests/flows.spec.ts` — desktop and phone menus, account menu, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
 GitHub Actions runs lint and the full suite on every push and pull request.
@@ -86,14 +104,21 @@ GitHub Actions runs lint and the full suite on every push and pull request.
 | `/projects/[id]/matches` | Matched developers with "why they fit" |
 | `/projects/[id]` | Project workspace |
 | `/dashboard` | Developer dashboard |
+| `/dashboard/profile` | Developer profile & shipped work |
+| `/dashboard/invitations/[id]` | Read a plan and accept or decline |
+| `/dashboard/projects/[id]` | Developer's project — hand in milestones |
+| `/review` · `/review/[id]` | QA queue and review form (staff only) |
 
-Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and `[AMOUNT]` are placeholders to set later.
+Values in brackets like `[YOUR FEE]` on the landing page are placeholders to set later.
 
 ## Structure
 
 - `src/app/globals.css` — Vouch colors and fonts (Tailwind v4 `@theme`)
-- `src/components/` — header, footer, logo, buttons, cards, pills, icons, stepper
-- `src/lib/data.ts` — sample plan, candidates, invitations
+- `src/components/` — header, footer, buttons, cards, milestone cards, skill picker, delivery controls
+- `src/lib/` — auth, projects, AI planning, matching, delivery rules
+- `src/db/schema.ts` — database tables · `drizzle/` — migrations
+
+Requires **Node 20–24** (`.nvmrc` pins 22); `npm install` stops with a clear message on other versions.
 
 ## Next steps
 
@@ -101,5 +126,5 @@ Sample data lives in `src/lib/data.ts`. Values in brackets like `[YOUR FEE]` and
 3. ~~Projects and plans saved in the database~~ ✓
 4. ~~AI scoping~~ ✓
 5. ~~Matching~~ ✓
-6. Milestones & QA flow
+6. ~~Milestones & QA flow~~ ✓
 7. Escrow payments

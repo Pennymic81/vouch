@@ -31,6 +31,9 @@ async function InvitationView({ params }: { params: Promise<{ id: string }> }) {
           <span>From {company || clientName}</span>
           <StatusBadge tone="brand">{inv.score}% match</StatusBadge>
           {inv.status === "accepted" && <StatusBadge tone="ink">You&apos;re on this project</StatusBadge>}
+          {inv.status === "accepted" && (
+            <Link href={`/dashboard/projects/${p.id}`} className="font-semibold text-brand underline underline-offset-2">Open project workspace →</Link>
+          )}
           {(inv.status === "declined" || inv.status === "withdrawn") && <StatusBadge tone="neutral">Closed</StatusBadge>}
         </div>
       </div>

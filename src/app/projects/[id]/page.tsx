@@ -5,45 +5,37 @@ import { AppHeader } from "@/components/app-header";
 import { Protected } from "@/components/protected";
 import { StatusBadge } from "@/components/form-bits";
 import { LockIcon } from "@/components/icons";
-import { ButtonLink, Card } from "@/components/ui";
-import { getSession } from "@/lib/session";
-import {
-  formatDays,
-  formatMoney,
-  getProjectForClient,
-  milestoneStatusLabel,
-  listInvitationsForProject,
-  projectStatusLabel,
-  totalsOf,
-} from "@/lib/projects";
-import { initialsOf } from "@/lib/session";
-import { Avatar } from "@/components/ui";
+import { Avatar, ButtonLink, Card } from "@/components/ui";
+import { MilestoneCard } from "@/components/milestone-card";
+import { ApprovalPanel, FundButton } from "@/components/delivery-controls";
+import { getSession, initialsOf } from "@/lib/session";
+import { formatDays, formatMoney, getProjectForClient, listInvitationsForProject, projectStatusLabel } from "@/lib/projects";
+import { autoApproveAt, milestoneDetails, recentActivity, runAutoApprovals } from "@/lib/delivery";
 import { WithdrawButton } from "./withdraw-button";
-import type { Milestone } from "@/db/schema";
 
 export const metadata: Metadata = { title: "Project" };
 
-const rowStyle: Record<Milestone["status"], { row: string; color: string }> = {
-  planned: { row: "border-line", color: "text-muted" },
-  funded: { row: "border-line", color: "text-brand-dark" },
-  in_progress: { row: "border-line", color: "text-brand-dark" },
-  in_qa: { row: "border-alert-line bg-alert-soft", color: "text-alert-dark" },
-  awaiting_approval: { row: "border-alert-line bg-alert-soft", color: "text-alert-dark" },
-  changes_requested: { row: "border-alert-line bg-alert-soft", color: "text-alert-dark" },
-  paid: { row: "border-line", color: "text-brand-dark" },
-};
+const fmtDay = (d: Date) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" }).format(d);
 
 async function Workspace({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getSession();
-  const p = session ? await getProjectForClient(id, session.user.id) : null;
+  let p = session ? await getProjectForClient(id, session.user.id) : null;
   if (!p) notFound();
   if (p.status === "draft") redirect(`/projects/${p.id}/plan`);
 
-  const t = totalsOf(p.milestones);
-  const invites = await listInvitationsForProject(p.id);
+  await runAutoApprovals(p.id);
+  p = (await getProjectForClient(id, session!.user.id))!;
+
+  const [milestones, invites, log] = await Promise.all([milestoneDetails(p.id), listInvitationsForProject(p.id), recentActivity(p.id)]);
   const hired = invites.find((i) => i.status === "accepted");
-  const paid = p.milestones.filter((m) => m.status === "paid").reduce((s, m) => s + m.amount, 0);
+  const total = milestones.reduce((s, m) => s + m.amount, 0);
+  const paid = milestones.filter((m) => m.status === "paid").reduce((s, m) => s + m.amount, 0);
+  const held = milestones.filter((m) => m.status !== "planned" && m.status !== "paid").reduce((s, m) => s + m.amount, 0);
+  const days = milestones.reduce((s, m) => s + m.durationDays, 0);
+  const doneCount = milestones.filter((m) => m.status === "paid").length;
+  const anyActive = milestones.some((m) => m.status !== "planned" && m.status !== "paid");
+  const nextToFund = p.status === "in_progress" && !anyActive ? milestones.find((m) => m.status === "planned") : undefined;
 
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-7 px-6 pb-20 pt-9">
@@ -54,7 +46,7 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
           </nav>
           <h1 className="text-[30px] font-bold md:text-[34px]">{p.title}</h1>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge tone={p.status === "open" ? "alert" : "brand"}>{projectStatusLabel[p.status]}</StatusBadge>
+            <StatusBadge tone={p.status === "open" ? "alert" : p.status === "completed" ? "ink" : "brand"}>{projectStatusLabel[p.status]}</StatusBadge>
             {p.summary && <span className="text-[15px] text-body">{p.summary}</span>}
           </div>
         </div>
@@ -94,34 +86,41 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
               )}
             </section>
           )}
+
           {hired && (
             <section aria-labelledby="dev-h" className="flex flex-wrap items-center gap-4 rounded-[18px] border-2 border-brand bg-white p-6">
               <Avatar initials={initialsOf(hired.name)} size="lg" />
               <div className="flex flex-col gap-1">
-                <h2 id="dev-h" className="text-xl font-bold">{hired.name} is building this</h2>
+                <h2 id="dev-h" className="text-xl font-bold">
+                  {hired.name} {p.status === "completed" ? "built this" : "is building this"}
+                </h2>
                 {hired.headline && <span className="text-[15px] text-body">{hired.headline}</span>}
-                <span className="text-sm text-muted">Accepted your plan · {hired.score}% match</span>
+                <span className="text-sm text-muted">{doneCount} of {milestones.length} milestones done</span>
               </div>
             </section>
           )}
+
+          {p.status === "completed" && (
+            <p role="status" className="rounded-[18px] bg-ink px-6 py-5 text-[17px] font-semibold text-white">
+              🎉 Every milestone passed QA and was paid. Your project is complete.
+            </p>
+          )}
+
           <Card className="flex flex-col gap-4 p-6 md:p-7">
             <section aria-labelledby="ms-h" className="flex flex-col gap-4">
               <h2 id="ms-h" className="text-[22px] font-bold">Milestones</h2>
-              <ol className="flex flex-col gap-2.5">
-                {p.milestones.map((m) => {
-                  const s = rowStyle[m.status];
+              <ol className="flex flex-col gap-3.5">
+                {milestones.map((m) => {
+                  const deadline = autoApproveAt(m);
                   return (
-                    <li key={m.id} className={`flex flex-col gap-2 rounded-xl border px-[18px] py-4 ${s.row}`}>
-                      <div className="flex flex-wrap justify-between gap-2.5">
-                        <span className="font-semibold">{m.position} · {m.title}</span>
-                        <span className={`text-sm font-semibold ${s.color}`}>{milestoneStatusLabel[m.status]}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-sm text-muted">
-                        <span>{formatMoney(m.amount, p.currency)}</span>
-                        <span>{m.durationDays} day{m.durationDays === 1 ? "" : "s"}</span>
-                        <span>{m.criteria.length} check{m.criteria.length === 1 ? "" : "s"}</span>
-                      </div>
-                    </li>
+                    <MilestoneCard key={m.id} m={m} currency={p.currency}>
+                      {nextToFund?.id === m.id && <FundButton milestoneId={m.id} position={m.position} amount={formatMoney(m.amount, p.currency)} />}
+                      {m.status === "awaiting_approval" && deadline && (
+                        <ApprovalPanel milestoneId={m.id} position={m.position} deadline={fmtDay(deadline)} />
+                      )}
+                      {m.status === "in_qa" && <p className="text-[15px] text-body">A Vouch reviewer is checking this against your list. You&apos;ll be asked to approve once it passes.</p>}
+                      {(m.status === "funded" || m.status === "in_progress") && <p className="text-[15px] text-body">Your developer is working on this. It goes to QA when they hand it in.</p>}
+                    </MilestoneCard>
                   );
                 })}
               </ol>
@@ -133,14 +132,37 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
           <section aria-labelledby="esc-h" className="flex flex-col gap-4 rounded-[18px] bg-ink p-6 text-white">
             <h2 id="esc-h" className="flex items-center gap-2.5 text-lg font-bold"><LockIcon className="size-5 text-brand-light" />Budget &amp; escrow</h2>
             <dl className="flex flex-col gap-4 text-[15px]">
-              <div className="flex justify-between"><dt className="text-slate-300">Total plan</dt><dd className="font-bold">{formatMoney(t.amount, p.currency)}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-300">Released so far</dt><dd className="font-bold">{formatMoney(paid, p.currency)}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-300">Estimated time</dt><dd className="font-bold">{formatDays(t.days)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-300">Total plan</dt><dd className="font-bold">{formatMoney(total, p.currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-300">Held in escrow</dt><dd className="font-bold" data-testid="escrow-held">{formatMoney(held, p.currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-300">Released so far</dt><dd className="font-bold" data-testid="escrow-released">{formatMoney(paid, p.currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-300">Estimated time</dt><dd className="font-bold">{formatDays(days)}</dd></div>
             </dl>
-            <p className="border-t border-slate-700 pt-3.5 text-sm text-slate-300">Nothing is charged until you choose a developer and fund the first milestone.</p>
+            <p className="border-t border-slate-700 pt-3.5 text-sm text-slate-300">
+              {p.status === "open"
+                ? "Nothing is charged until you choose a developer and fund the first milestone."
+                : p.status === "completed"
+                  ? "Everything has been released. Thank you for building with Vouch."
+                  : "You fund one milestone at a time. Money is only released after QA passes and you approve."}
+            </p>
+            <p className="text-xs text-slate-400">Payments are simulated until card payments are switched on.</p>
           </section>
+
+          {log.length > 0 && (
+            <Card className="flex flex-col gap-3.5 p-6">
+              <h2 className="text-lg font-bold">Activity</h2>
+              <ul aria-label="Activity" className="flex flex-col gap-3 text-sm text-body">
+                {log.map((a) => (
+                  <li key={a.id} className="flex flex-col gap-0.5">
+                    <span>{a.message}</span>
+                    <span className="text-xs text-muted">{fmtDay(a.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           <p className="rounded-[18px] bg-brand-soft px-6 py-5 text-sm leading-relaxed text-brand-deep">
-            <strong>Protected.</strong> If your developer goes inactive for 7 days, we match a replacement and your escrow moves with the project.
+            <strong>Protected.</strong> Your money is only released for work that passes QA against the checks you agreed.
           </p>
         </aside>
       </div>

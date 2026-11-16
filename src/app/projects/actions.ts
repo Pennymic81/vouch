@@ -5,7 +5,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { invitation, milestone, project } from "@/db/schema";
+import { activity, invitation, milestone, project } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { cleanSkills } from "@/lib/skills";
 import { findMatches, MIN_SCORE } from "@/lib/matching";
@@ -181,6 +181,7 @@ export async function publishProject(projectId: string): Promise<FormState> {
   if (p.skills.length === 0) return { error: "Pick at least one skill this project needs, so we can match you." };
 
   await db.update(project).set({ status: "open", updatedAt: new Date() }).where(eq(project.id, p.id));
+  await db.insert(activity).values({ id: crypto.randomUUID(), projectId: p.id, message: "You published the plan" });
   redirect(`/projects/${p.id}/matches`);
 }
 
@@ -265,6 +266,7 @@ export async function inviteDeveloper(projectId: string, developerId: string): P
   if (match.invitationStatus) return { error: "You've already invited this developer." };
 
   await db.insert(invitation).values({ id: crypto.randomUUID(), projectId: p.id, developerId, score: match.score });
+  await db.insert(activity).values({ id: crypto.randomUUID(), projectId: p.id, message: `You invited ${match.name}` });
   refresh();
   return { ok: true };
 }

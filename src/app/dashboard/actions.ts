@@ -5,7 +5,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { developerProfile, invitation, project, proof } from "@/db/schema";
+import { activity, developerProfile, invitation, project, proof } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { cleanSkills } from "@/lib/skills";
 
@@ -118,6 +118,7 @@ export async function respondToInvitation(invitationId: string, accept: boolean)
       .where(and(eq(invitation.projectId, p.id), ne(invitation.id, inv.id), eq(invitation.status, "pending")))
       .run();
     tx.update(project).set({ status: "in_progress", developerId: me.id, updatedAt: now }).where(eq(project.id, p.id)).run();
+    tx.insert(activity).values({ id: crypto.randomUUID(), projectId: p.id, message: `${me.name.split(" ")[0]} accepted your plan and joined the project` }).run();
   });
   redirect(`/dashboard/invitations/${inv.id}`);
 }

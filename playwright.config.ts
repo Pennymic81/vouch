@@ -32,6 +32,7 @@ export default defineConfig({
       BETTER_AUTH_SECRET: "test-secret-only-for-e2e-0123456789abcdef",
       E2E: "1",
       AI_FAKE: "1", // tests use a predictable stand-in instead of the real AI
+      REVIEWER_EMAILS: "*@qa.vouch.test",
     },
   },
 });

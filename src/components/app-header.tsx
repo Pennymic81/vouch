@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Logo } from "./logo";
 import { UserMenu } from "./user-menu";
 import { getSession, initialsOf } from "@/lib/session";
+import { isReviewer } from "@/lib/delivery";
 
 type Tab = { href: string; label: string; key: string };
 
@@ -21,7 +22,13 @@ async function CurrentUser() {
   if (!session) return <AvatarPlaceholder />;
   const { name, email, role } = session.user;
   return (
-    <UserMenu name={name} email={email} initials={initialsOf(name)} role={role === "developer" ? "developer" : "client"} />
+    <UserMenu
+      name={name}
+      email={email}
+      initials={initialsOf(name)}
+      role={role === "developer" ? "developer" : "client"}
+      reviewer={isReviewer(email)}
+    />
   );
 }
 
@@ -29,14 +36,16 @@ function AvatarPlaceholder() {
   return <span aria-hidden="true" className="inline-block size-10 rounded-full bg-slate-100" />;
 }
 
+const reviewerTabs: Tab[] = [{ key: "queue", href: "/review", label: "QA queue" }];
+
 export function AppHeader({
   role = "client",
   active,
 }: {
-  role?: "client" | "developer";
+  role?: "client" | "developer" | "reviewer";
   active: string;
 }) {
-  const tabs = role === "client" ? clientTabs : developerTabs;
+  const tabs = role === "reviewer" ? reviewerTabs : role === "client" ? clientTabs : developerTabs;
   return (
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-6 py-3.5">

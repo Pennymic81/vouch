@@ -86,7 +86,7 @@ async function Dashboard() {
                 <ul className="flex flex-col gap-3">
                   {active.map((iv) => (
                     <li key={iv.id}>
-                      <Link href={`/dashboard/invitations/${iv.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-line p-5 text-ink no-underline hover:border-line-strong">
+                      <Link href={`/dashboard/projects/${iv.projectId}`} className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-line p-5 text-ink no-underline hover:border-line-strong">
                         <span className="text-[17px] font-bold">{iv.title}</span>
                         <span className="text-sm text-muted">{iv.company || iv.clientName}</span>
                       </Link>

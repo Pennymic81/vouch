@@ -123,3 +123,69 @@ export async function publishedProject(page: Page, title: string) {
   await page.goto(`/projects/${id}/matches?all=1`);
   return id;
 }
+
+/** Signs up a Vouch QA reviewer (any email on the test reviewer domain) in its own browser context. */
+export async function createReviewer(browser: import("@playwright/test").Browser) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const email = `qa-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@qa.vouch.test`;
+  const res = await page.request.post("/api/auth/sign-up/email", {
+    data: { name: "Quinn Reviewer", email, password: PASSWORD, role: "client" },
+  });
+  expect(res.ok()).toBeTruthy();
+  return { context, page, email };
+}
+
+/**
+ * A project that's ready for delivery: the owner (on `page`) published an AI plan
+ * (3 milestones: $700, $500, $600) and a matching developer accepted it.
+ */
+export async function hiredProject(page: Page, browser: import("@playwright/test").Browser) {
+  const t = Math.random().toString(36).slice(2, 7).toUpperCase();
+  const dev = await createDeveloper(browser, {
+    name: `Builder ${t}`,
+    skills: ["AI chatbots", "Knowledge base / RAG", "Website chat widget"],
+    proofs: [{ title: `Bot ${t}`, skills: ["AI chatbots", "Knowledge base / RAG", "Website chat widget"] }],
+  });
+  const id = await publishedProject(page, `Delivery project ${t}`);
+  await page.getByRole("button", { name: `Invite Builder ${t} to this project` }).click();
+  await expect(page.getByText(`Invited — waiting for Builder`)).toBeVisible();
+
+  await dev.page.goto("/dashboard");
+  await dev.page.getByRole("link", { name: "Read the plan" }).first().click();
+  await dev.page.getByRole("button", { name: "Accept & join project" }).click();
+  await expect(dev.page.getByText("You're on this project")).toBeVisible();
+
+  await page.goto(`/projects/${id}`);
+  page.on("dialog", (d) => d.accept());
+  return { id, dev, devName: `Builder ${t}`, title: `Delivery project ${t}` };
+}
+
+/** Developer hands in a milestone from their project page. */
+export async function submitWork(devPage: Page, projectId: string, position: number, note = "Everything on the list is done. Try it with the demo link.") {
+  await devPage.goto(`/dashboard/projects/${projectId}`);
+  const form = devPage.getByRole("form", { name: `Submit milestone ${position}` });
+  await form.getByLabel("What you delivered").fill(note);
+  await form.getByLabel("Demo link").fill(`https://demo.example.com/m${position}`);
+  await form.getByRole("button", { name: "Submit for QA" }).click();
+  await expect(devPage.getByRole("listitem", { name: new RegExp(`^Milestone ${position}:`) })).toContainText("In QA review");
+}
+
+/** Reviewer marks every check; pass `fail` with indexes to fail and notes. */
+export async function reviewWork(reviewerPage: Page, projectTitle: string, position: number, fail: Record<number, string> = {}) {
+  await reviewerPage.goto("/review");
+  await reviewerPage.getByRole("link", { name: new RegExp(`${projectTitle} · milestone ${position}`) }).click();
+  const form = reviewerPage.getByRole("form", { name: "QA review" });
+  await expect(form).toBeVisible(); // wait for the page to open before counting checks
+  const groups = form.getByRole("group");
+  const count = await groups.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    const radio = groups.nth(i).getByRole("radio", { name: fail[i] !== undefined ? "Failed" : "Passed" });
+    await radio.check();
+    await expect(radio).toBeChecked();
+    if (fail[i] !== undefined) await form.getByLabel(`Note for check ${i + 1}`).fill(fail[i]);
+  }
+  await form.getByRole("button", { name: "Submit review" }).click();
+  await expect(reviewerPage).toHaveURL("/review");
+}

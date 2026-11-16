@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/lib/auth-client";
@@ -9,11 +10,13 @@ export function UserMenu({
   email,
   initials,
   role,
+  reviewer = false,
 }: {
   name: string;
   email: string;
   initials: string;
   role: "client" | "developer";
+  reviewer?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -67,6 +70,11 @@ export function UserMenu({
               {role === "client" ? "Business owner" : "Developer / AI engineer"}
             </div>
           </div>
+          {reviewer && (
+            <Link role="menuitem" href="/review" className="mt-1 block rounded-lg px-3 py-2.5 text-[15px] font-medium text-ink no-underline hover:bg-ground">
+              QA review queue
+            </Link>
+          )}
           <button
             type="button"
             role="menuitem"
