@@ -75,7 +75,8 @@ async function nameOf(userId: string | null) {
 
 // ── Owner actions ─────────────────────────────────────────────────
 
-export async function fundMilestone(milestoneId: string, clientId: string) {
+/** Checks a milestone can be funded right now, and returns it. Used before checkout and again after payment. */
+export async function assertCanFund(milestoneId: string, clientId: string) {
   const { m, p } = await loadMilestone(milestoneId);
   if (p.clientId !== clientId) throw new DeliveryError("Milestone not found.");
   if (p.status !== "in_progress") throw new DeliveryError("Choose a developer before funding milestones.");
@@ -85,9 +86,13 @@ export async function fundMilestone(milestoneId: string, clientId: string) {
   if (all.some((x) => ACTIVE.includes(x.status))) throw new DeliveryError("Finish the current milestone before funding the next one.");
   const next = all.find((x) => x.status === "planned");
   if (next?.id !== m.id) throw new DeliveryError("Milestones are funded in order.");
+  return { m, p };
+}
 
+export async function fundMilestone(milestoneId: string, clientId: string, via = "") {
+  const { m, p } = await assertCanFund(milestoneId, clientId);
   await db.update(milestone).set({ status: "funded", fundedAt: new Date(), updatedAt: new Date() }).where(eq(milestone.id, m.id));
-  await log(p.id, `You funded milestone ${m.position} · ${m.title}`);
+  await log(p.id, `You funded milestone ${m.position} · ${m.title}${via}`);
 }
 
 export async function approveMilestone(milestoneId: string, clientId: string) {
@@ -121,6 +126,10 @@ async function markPaid(m: Milestone, p: Project, auto: boolean) {
       ? `Milestone ${m.position} was approved automatically after the review window — payment released to ${dev}`
       : `You approved milestone ${m.position} — payment released to ${dev}`,
   );
+  // Send the developer their share (no-op when payments are simulated).
+  const { releasePayout } = await import("./payments");
+  await releasePayout(m, p);
+
   const remaining = await db
     .select({ id: milestone.id })
     .from(milestone)

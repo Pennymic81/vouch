@@ -122,3 +122,56 @@ export async function respondToInvitation(invitationId: string, accept: boolean)
   });
   redirect(`/dashboard/invitations/${inv.id}`);
 }
+
+// ── Payouts (step 7) ──────────────────────────────────────────────
+
+const bankSchema = z.object({
+  bankCode: z.string().trim().min(2, "Choose your bank.").max(20),
+  accountNumber: z.string().trim().regex(/^\d{10}$/, "Enter your 10-digit account number."),
+});
+
+async function validBank(code: string) {
+  const { listBanks } = await import("@/lib/paystack");
+  const { appCurrency } = await import("@/lib/settings");
+  const bank = (await listBanks(appCurrency())).find((b) => b.code === code);
+  return bank ?? null;
+}
+
+export type BankState = (FormState & { accountName?: string; accountNumber?: string; bankCode?: string }) | undefined;
+
+/** Step 1: ask the bank for the account holder's name so the developer can confirm it. */
+export async function checkBankAction(_: BankState, formData: FormData): Promise<BankState> {
+  await requireDeveloper();
+  const parsed = bankSchema.safeParse({ bankCode: formData.get("bankCode"), accountNumber: formData.get("accountNumber") });
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+  if (!(await validBank(parsed.data.bankCode))) return { fieldErrors: { bankCode: "Choose your bank." } };
+  const { PaystackError } = await import("@/lib/paystack");
+  const { checkBankAccount } = await import("@/lib/payments");
+  try {
+    const { accountName } = await checkBankAccount(parsed.data.accountNumber, parsed.data.bankCode);
+    return { accountName, ...parsed.data };
+  } catch (err) {
+    if (err instanceof PaystackError) return { error: "We couldn't find that account. Check the number and bank." };
+    throw err;
+  }
+}
+
+/** Step 2: save it (as a Paystack transfer recipient) and send any payouts that were waiting. */
+export async function saveBankAction(_: BankState, formData: FormData): Promise<BankState> {
+  const me = await requireDeveloper();
+  const parsed = bankSchema.safeParse({ bankCode: formData.get("bankCode"), accountNumber: formData.get("accountNumber") });
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+  const bank = await validBank(parsed.data.bankCode);
+  if (!bank) return { fieldErrors: { bankCode: "Choose your bank." } };
+  const { PaystackError } = await import("@/lib/paystack");
+  const { saveBankAccount } = await import("@/lib/payments");
+  const { appCurrency } = await import("@/lib/settings");
+  try {
+    await saveBankAccount(me.id, { ...parsed.data, bankName: bank.name, currency: appCurrency() });
+  } catch (err) {
+    if (err instanceof PaystackError) return { error: "Paystack couldn't save that account. Please try again." };
+    throw err;
+  }
+  refresh();
+  return { ok: true };
+}

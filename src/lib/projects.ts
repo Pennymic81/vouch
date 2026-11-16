@@ -41,9 +41,7 @@ export async function getProjectForClient(id: string, clientId: string): Promise
   return { ...p, milestones: ms };
 }
 
-export function formatMoney(amount: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
-}
+export { formatMoney } from "./currency";
 
 export function formatDays(days: number) {
   if (days < 14) return `${days} day${days === 1 ? "" : "s"}`;

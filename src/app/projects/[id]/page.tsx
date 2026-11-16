@@ -12,13 +12,27 @@ import { getSession, initialsOf } from "@/lib/session";
 import { formatDays, formatMoney, getProjectForClient, listInvitationsForProject, projectStatusLabel } from "@/lib/projects";
 import { autoApproveAt, milestoneDetails, recentActivity, runAutoApprovals } from "@/lib/delivery";
 import { WithdrawButton } from "./withdraw-button";
+import { paymentsEnabled } from "@/lib/paystack";
 
 export const metadata: Metadata = { title: "Project" };
 
 const fmtDay = (d: Date) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" }).format(d);
 
-async function Workspace({ params }: { params: Promise<{ id: string }> }) {
+const paymentMessages = {
+  funded: { tone: "brand", text: "✓ Payment received — the milestone is funded and your developer can start." },
+  failed: { tone: "alert", text: "The payment didn't go through, so nothing was charged. You can try again." },
+  pending: { tone: "alert", text: "Your payment is still being confirmed. Refresh this page in a minute." },
+} as const;
+
+async function Workspace({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  const paymentResult = String((await searchParams).payment ?? "") as keyof typeof paymentMessages;
   const session = await getSession();
   let p = session ? await getProjectForClient(id, session.user.id) : null;
   if (!p) notFound();
@@ -52,6 +66,17 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
         </div>
         {p.status === "open" && <ButtonLink href={`/projects/${p.id}/matches`}>See your matches</ButtonLink>}
       </div>
+
+      {paymentMessages[paymentResult] && (
+        <p
+          role="status"
+          className={`rounded-[14px] px-5 py-4 text-[15px] font-semibold ${
+            paymentMessages[paymentResult].tone === "brand" ? "bg-brand-soft text-brand-deep" : "border border-alert-line bg-alert-soft text-alert-dark"
+          }`}
+        >
+          {paymentMessages[paymentResult].text}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-start gap-7">
         <div className="flex min-w-0 flex-[999_1_620px] flex-col gap-5">
@@ -114,7 +139,7 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
                   const deadline = autoApproveAt(m);
                   return (
                     <MilestoneCard key={m.id} m={m} currency={p.currency}>
-                      {nextToFund?.id === m.id && <FundButton milestoneId={m.id} position={m.position} amount={formatMoney(m.amount, p.currency)} />}
+                      {nextToFund?.id === m.id && <FundButton milestoneId={m.id} position={m.position} amount={formatMoney(m.amount, p.currency)} paystack={paymentsEnabled()} />}
                       {m.status === "awaiting_approval" && deadline && (
                         <ApprovalPanel milestoneId={m.id} position={m.position} deadline={fmtDay(deadline)} />
                       )}
@@ -144,7 +169,9 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
                   ? "Everything has been released. Thank you for building with Vouch."
                   : "You fund one milestone at a time. Money is only released after QA passes and you approve."}
             </p>
-            <p className="text-xs text-slate-400">Payments are simulated until card payments are switched on.</p>
+            <p className="text-xs text-slate-400">
+              {paymentsEnabled() ? "Payments are processed securely by Paystack." : "Payments are simulated until Paystack is connected."}
+            </p>
           </section>
 
           {log.length > 0 && (
@@ -170,12 +197,12 @@ async function Workspace({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function ProjectPage({ params }: PageProps<"/projects/[id]">) {
+export default function ProjectPage({ params, searchParams }: PageProps<"/projects/[id]">) {
   return (
     <>
       <AppHeader active="projects" />
       <Protected role="client" returnTo="/projects">
-        <Workspace params={params} />
+        <Workspace params={params} searchParams={searchParams} />
       </Protected>
     </>
   );

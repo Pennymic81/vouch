@@ -4,6 +4,7 @@ import { Protected } from "@/components/protected";
 import { getSession } from "@/lib/session";
 import { getProfile, listProof, profileStrength } from "@/lib/developers";
 import { ProfileForm, ProofForm, ProofList } from "./profile-forms";
+import { appCurrency } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Profile & proof" };
 
@@ -30,6 +31,7 @@ async function Profile() {
         <section aria-labelledby="profile-h" className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 rounded-[18px] border border-line bg-white p-6 md:p-7">
           <h2 id="profile-h" className="text-[22px] font-bold">Your profile</h2>
           <ProfileForm
+            currency={appCurrency()}
             initial={
               profile
                 ? { headline: profile.headline, bio: profile.bio, location: profile.location, hourlyRate: profile.hourlyRate, available: profile.available, skills: profile.skills }

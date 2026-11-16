@@ -68,7 +68,14 @@ planned ─fund─▶ funded ─submit─▶ in QA ─pass─▶ awaiting approv
 - **QA reviewers** (`/review`) are Vouch staff listed in `REVIEWER_EMAILS` (`*@domain` allowed). They mark every agreed check as passed or failed — a failed check needs a note — and can't review projects they're part of
 - If the owner doesn't respond within `REVIEW_WINDOW_DAYS` (default 5) after QA passes, the milestone is approved automatically
 - When every milestone is paid, the project is **completed**. Escrow amounts and an activity log are shown to both sides
-- Payments are simulated until step 7
+## Payments (step 7, Paystack)
+
+- **Funding:** "Fund milestone" opens Paystack's checkout (card, bank transfer, USSD). Back on Vouch, every payment is **verified with Paystack's servers** — status, amount and currency — before the milestone is funded. Confirming twice never funds twice
+- **Webhook:** `POST /api/webhooks/paystack` accepts Paystack events only with a valid `x-paystack-signature` (HMAC-SHA512 of the raw body). `charge.success` is re-verified with Paystack; `transfer.*` events update payouts. Set the URL in Paystack → Settings → API Keys & Webhooks
+- **Developer payouts:** developers add a bank account at `/dashboard/payouts`; Paystack resolves the account name for them to confirm, and Vouch keeps only the last 4 digits. When a milestone is approved (or auto-approved), Vouch transfers the milestone amount minus `PLATFORM_FEE_PERCENT` from your Paystack balance. Payouts wait for bank details, and failed transfers retry when the developer saves a working account
+- **Settings:** `PAYSTACK_SECRET_KEY`, `APP_CURRENCY` (default NGN), `PLATFORM_FEE_PERCENT` (default 10). Without a key, payments are simulated
+- Transfers need to be enabled on your Paystack account (and, in live mode, a verified business). Refunds are handled from the Paystack dashboard for now
+- Tests use a pretend Paystack (`PAYSTACK_FAKE=1`) with its own checkout page, so they never touch the real API or real money
 
 ## Tests
 
@@ -86,6 +93,7 @@ npm run test:ui                   # interactive runner
 - `tests/ai.spec.ts` — AI writes a plan, answering its questions updates it, rewrites replace hand-made milestones, editing AI milestones, the 10-rewrite limit, locked after publishing
 - `tests/matching.spec.ts` — profile and proof validation, profile strength, ranking with reasons and gaps, who is left out, invite → accept → joins project, decline, withdraw, top-10 with "show all", invitation privacy
 - `tests/delivery.spec.ts` — fund → deliver → QA → approve → paid, QA failure and resubmission, owner change requests, auto-approval, completing a project, validation and order rules, reviewer access and conflicts, developer privacy
+- `tests/payments.spec.ts` — paying through checkout, cancelled payments, replayed return links, webhook-only confirmation, forged webhooks rejected, payouts after bank details, instant payouts, failed transfers retried, bank account checks
 - `tests/flows.spec.ts` — desktop and phone menus, account menu, FAQ
 - `tests/accessibility.spec.ts` — axe WCAG 2.1 A/AA scan of every page, one h1 per page, tap-target sizes on phones
 
@@ -108,6 +116,7 @@ GitHub Actions runs lint and the full suite on every push and pull request.
 | `/dashboard/invitations/[id]` | Read a plan and accept or decline |
 | `/dashboard/projects/[id]` | Developer's project — hand in milestones |
 | `/review` · `/review/[id]` | QA queue and review form (staff only) |
+| `/dashboard/payouts` | Developer bank account and payout history |
 
 Values in brackets like `[YOUR FEE]` on the landing page are placeholders to set later.
 
@@ -127,4 +136,5 @@ Requires **Node 20–24** (`.nvmrc` pins 22); `npm install` stops with a clear m
 4. ~~AI scoping~~ ✓
 5. ~~Matching~~ ✓
 6. ~~Milestones & QA flow~~ ✓
-7. Escrow payments
+7. ~~Escrow payments (Paystack)~~ ✓
+8. Go live: hosted Postgres database and deployment

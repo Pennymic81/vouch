@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { Button, inputClass } from "@/components/ui";
 import { FieldError, FormAlert } from "@/components/form-bits";
 import { SkillPicker } from "@/components/skill-picker";
+import { formatMoney } from "@/lib/currency";
 import {
   addMilestone,
   deleteMilestone,
@@ -18,8 +19,7 @@ import {
 
 type MilestoneData = { id: string; title: string; criteria: string[]; amount: number; durationDays: number };
 
-const money = (n: number, currency: string) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+const money = (n: number, currency: string) => formatMoney(n, currency);
 
 // ── Project details ───────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ export function ProjectDetailsForm({ projectId, title, idea, summary }: { projec
 
 // ── Milestone form (add + edit) ───────────────────────────────────
 
-function MilestoneFields({ state, prefix, initial }: { state: FormState; prefix: string; initial?: MilestoneData }) {
+function MilestoneFields({ state, prefix, initial, currency }: { state: FormState; prefix: string; initial?: MilestoneData; currency: string }) {
   const e = state?.fieldErrors ?? {};
   const id = (f: string) => `${prefix}-${f}`;
   return (
@@ -79,7 +79,7 @@ function MilestoneFields({ state, prefix, initial }: { state: FormState; prefix:
       </label>
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-2 text-[15px] font-semibold">
-          Amount (USD)
+          Amount ({currency})
           <input name="amount" type="number" inputMode="numeric" min={1} max={1000000} step={1} defaultValue={initial?.amount} required aria-invalid={!!e.amount} aria-describedby={e.amount ? id("amount") : undefined} className={inputClass} />
           <FieldError id={id("amount")} message={e.amount} />
         </label>
@@ -94,7 +94,7 @@ function MilestoneFields({ state, prefix, initial }: { state: FormState; prefix:
   );
 }
 
-export function NewMilestoneForm({ projectId }: { projectId: string }) {
+export function NewMilestoneForm({ projectId, currency }: { projectId: string; currency: string }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(addMilestone.bind(null, projectId), undefined);
   const [seen, setSeen] = useState(state);
@@ -116,7 +116,7 @@ export function NewMilestoneForm({ projectId }: { projectId: string }) {
   return (
     <form key={formKey} action={action} aria-label="New milestone" className="flex flex-col gap-4 rounded-[14px] border-2 border-brand-tint bg-ground p-5">
       <h3 className="text-lg font-bold">New milestone</h3>
-      <MilestoneFields state={state} prefix="new" />
+      <MilestoneFields state={state} prefix="new" currency={currency} />
       <div className="flex flex-wrap gap-2.5">
         <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add milestone"}</Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>Done</Button>
@@ -143,7 +143,7 @@ export function MilestoneEditor({ milestone, index, count, currency }: { milesto
     return (
       <li className="rounded-[14px] border-2 border-brand-tint p-5">
         <form action={action} aria-label={`Edit milestone ${n}`} className="flex flex-col gap-4">
-          <MilestoneFields state={state} prefix={`m${n}`} initial={milestone} />
+          <MilestoneFields state={state} prefix={`m${n}`} initial={milestone} currency={currency} />
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save milestone"}</Button>
             <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>Cancel</Button>

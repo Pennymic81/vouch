@@ -66,7 +66,7 @@ async function Matches({ params, searchParams }: { params: Promise<{ id: string 
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Pill>{m.score}% match{i === 0 ? " · Best fit" : ""}</Pill>
-                    <Pill tone="neutral">{formatMoney(m.hourlyRate)}/hr</Pill>
+                    <Pill tone="neutral">{formatMoney(m.hourlyRate, p.currency)}/hr</Pill>
                   </div>
                 </div>
 

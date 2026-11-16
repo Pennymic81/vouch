@@ -15,6 +15,7 @@ const clientTabs: Tab[] = [
 const developerTabs: Tab[] = [
   { key: "dashboard", href: "/dashboard", label: "Dashboard" },
   { key: "profile", href: "/dashboard/profile", label: "Profile & proof" },
+  { key: "payouts", href: "/dashboard/payouts", label: "Payouts" },
 ];
 
 async function CurrentUser() {

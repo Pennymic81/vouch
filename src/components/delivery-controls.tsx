@@ -19,14 +19,16 @@ function useAction(fn: () => Promise<ActionResult>) {
 
 // ── Owner ─────────────────────────────────────────────────────────
 
-export function FundButton({ milestoneId, position, amount }: { milestoneId: string; position: number; amount: string }) {
+export function FundButton({ milestoneId, position, amount, paystack }: { milestoneId: string; position: number; amount: string; paystack: boolean }) {
   const { error, pending, run } = useAction(() => fundAction(milestoneId));
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-4">
-      <p className="text-[15px] text-body">Funding puts {amount} into escrow. Your developer can start straight away, and nothing is released until QA passes and you approve.</p>
+      <p className="text-[15px] text-body">
+        Funding puts {amount} into escrow{paystack ? " — you'll pay securely with Paystack (card, bank transfer or USSD)" : ""}. Your developer can start straight away, and nothing is released until QA passes and you approve.
+      </p>
       <FormAlert>{error}</FormAlert>
       <Button className="self-start" disabled={pending} onClick={run} aria-label={`Fund milestone ${position}`}>
-        {pending ? "Funding…" : `Fund milestone ${position} · ${amount}`}
+        {pending ? (paystack ? "Opening checkout…" : "Funding…") : `Fund milestone ${position} · ${amount}`}
       </Button>
     </div>
   );

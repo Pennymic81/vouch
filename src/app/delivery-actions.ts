@@ -4,10 +4,10 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
+import { startFunding } from "@/lib/payments";
 import {
   DeliveryError,
   approveMilestone,
-  fundMilestone,
   requestOwnerChanges,
   reviewMilestone,
   submitMilestone,
@@ -44,7 +44,13 @@ function fieldErrors(error: z.ZodError) {
 
 export async function fundAction(milestoneId: string): Promise<ActionResult> {
   const me = await user("client");
-  return run(() => fundMilestone(milestoneId, me.id));
+  let checkoutUrl: string | null = null;
+  const result = await run(async () => {
+    checkoutUrl = await startFunding(milestoneId, { id: me.id, email: me.email });
+  });
+  // With Paystack on, send the owner to the secure checkout page.
+  if (result?.ok && checkoutUrl) redirect(checkoutUrl);
+  return result;
 }
 
 export async function approveAction(milestoneId: string): Promise<ActionResult> {

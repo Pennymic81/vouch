@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { expect, test, type Page } from "@playwright/test";
-import { createReviewer, hiredProject, reviewWork, signUpViaApi, submitWork } from "./helpers";
+import { createReviewer, fundViaCheckout, hiredProject, reviewWork, signUpViaApi, submitWork } from "./helpers";
 
 // Each test hires a developer and walks milestones through funding, delivery, QA and approval.
 // AI stand-in plan: 1 · Collect your content and rules ($700, 2 checks) · 2 · Website chat widget ($500) · 3 · Hand-off to your staff ($600)
@@ -14,8 +14,7 @@ test("happy path: fund → deliver → QA passes → owner approves → develope
 
   // Only the first milestone can be funded.
   await expect(page.getByRole("button", { name: /^Fund milestone/ })).toHaveCount(1);
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded · in progress");
+  await fundViaCheckout(page, 1);
   await expect(page.getByTestId("escrow-held")).toHaveText("$700");
   await expect(page.getByRole("button", { name: /^Fund milestone/ })).toHaveCount(0);
 
@@ -39,7 +38,7 @@ test("happy path: fund → deliver → QA passes → owner approves → develope
   await expect(page.getByRole("button", { name: "Fund milestone 2" })).toBeVisible();
 
   await dev.page.goto(`/dashboard/projects/${id}`);
-  await expect(dev.page.getByTestId("dev-earned")).toHaveText("$700");
+  await expect(dev.page.getByTestId("dev-earned")).toHaveText("$630"); // $700 minus the 10% platform fee
   expect(devName).toContain("Builder");
   await dev.context.close();
   await qa.context.close();
@@ -48,8 +47,7 @@ test("happy path: fund → deliver → QA passes → owner approves → develope
 test("QA failure sends work back with notes; the developer fixes and resubmits", async ({ page, browser }) => {
   const { id, dev, title } = await hiredProject(page, browser);
   const qa = await createReviewer(browser);
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded");
+  await fundViaCheckout(page, 1);
 
   await submitWork(dev.page, id, 1);
   await reviewWork(qa.page, title, 1, { 1: "Only 14 of the 20 test questions were answered correctly." });
@@ -74,8 +72,7 @@ test("QA failure sends work back with notes; the developer fixes and resubmits",
 test("the owner can request changes after QA, and the developer sees why", async ({ page, browser }) => {
   const { id, dev, title } = await hiredProject(page, browser);
   const qa = await createReviewer(browser);
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded");
+  await fundViaCheckout(page, 1);
   await submitWork(dev.page, id, 1);
   await reviewWork(qa.page, title, 1);
 
@@ -96,8 +93,7 @@ test("the owner can request changes after QA, and the developer sees why", async
 test("milestones auto-approve when the owner doesn't respond in time", async ({ page, browser }) => {
   const { id, dev, title } = await hiredProject(page, browser);
   const qa = await createReviewer(browser);
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded");
+  await fundViaCheckout(page, 1);
   await submitWork(dev.page, id, 1);
   await reviewWork(qa.page, title, 1);
 
@@ -122,8 +118,7 @@ test("delivering every milestone completes the project", async ({ page, browser 
   const qa = await createReviewer(browser);
   for (const n of [1, 2, 3]) {
     await page.goto(`/projects/${id}`);
-    await page.getByRole("button", { name: `Fund milestone ${n}` }).click();
-    await expect(card(page, n)).toContainText("Funded");
+    await fundViaCheckout(page, n);
     await submitWork(dev.page, id, n);
     await reviewWork(qa.page, title, n);
     await page.reload();
@@ -146,8 +141,7 @@ test("inputs are validated and rules can't be skipped", async ({ page, browser }
   await expect(card(dev.page, 1)).toContainText("Waiting for the owner to fund this milestone.");
   await expect(dev.page.getByRole("form", { name: "Submit milestone 1" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded");
+  await fundViaCheckout(page, 1);
 
   // Demo links must be https, checked on the server.
   await dev.page.reload();
@@ -204,8 +198,7 @@ test("reviewers can't review their own projects", async ({ page, browser }) => {
   await expect(dev.page.getByText("You're on this project")).toBeVisible();
 
   await page.goto(`/projects/${id}`);
-  await page.getByRole("button", { name: "Fund milestone 1" }).click();
-  await expect(card(page, 1)).toContainText("Funded");
+  await fundViaCheckout(page, 1);
   await submitWork(dev.page, id, 1);
 
   await page.goto("/review");

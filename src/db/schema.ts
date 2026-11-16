@@ -284,3 +284,77 @@ export const activity = sqliteTable(
 
 export type Submission = typeof submission.$inferSelect;
 export type QaReview = typeof qaReview.$inferSelect;
+
+// ── Payments (step 7, Paystack) ───────────────────────────────────
+
+export const PAYMENT_STATUSES = ["pending", "success", "failed", "abandoned"] as const;
+
+/** Money an owner pays in to fund one milestone (held in the Paystack balance as escrow). */
+export const payment = sqliteTable(
+  "payment",
+  {
+    /** Also the Paystack transaction reference. */
+    id: text("id").primaryKey(),
+    milestoneId: text("milestone_id")
+      .notNull()
+      .references(() => milestone.id, { onDelete: "cascade" }),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Whole units of `currency`. */
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status", { enum: PAYMENT_STATUSES }).notNull().default("pending"),
+    channel: text("channel"),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+    ...timestamps,
+  },
+  (t) => [index("payment_milestone_idx").on(t.milestoneId)],
+);
+
+export const PAYOUT_STATUSES = ["awaiting_bank_details", "processing", "success", "failed"] as const;
+
+/** Money sent to a developer when a milestone is approved. */
+export const payout = sqliteTable(
+  "payout",
+  {
+    /** Also the Paystack transfer reference. */
+    id: text("id").primaryKey(),
+    milestoneId: text("milestone_id")
+      .notNull()
+      .unique()
+      .references(() => milestone.id, { onDelete: "cascade" }),
+    developerId: text("developer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Milestone amount, Vouch's fee, and what the developer receives. Whole units. */
+    gross: integer("gross").notNull(),
+    fee: integer("fee").notNull(),
+    net: integer("net").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status", { enum: PAYOUT_STATUSES }).notNull(),
+    transferCode: text("transfer_code"),
+    failureReason: text("failure_reason"),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+    ...timestamps,
+  },
+  (t) => [index("payout_developer_idx").on(t.developerId)],
+);
+
+/** A developer's bank account, saved at Paystack as a transfer recipient. Only the last 4 digits are kept here. */
+export const payoutAccount = sqliteTable("payout_account", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  bankCode: text("bank_code").notNull(),
+  bankName: text("bank_name").notNull(),
+  accountName: text("account_name").notNull(),
+  last4: text("last4").notNull(),
+  recipientCode: text("recipient_code").notNull(),
+  currency: text("currency").notNull(),
+  ...timestamps,
+});
+
+export type Payment = typeof payment.$inferSelect;
+export type Payout = typeof payout.$inferSelect;
+export type PayoutAccount = typeof payoutAccount.$inferSelect;

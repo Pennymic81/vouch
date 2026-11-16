@@ -85,7 +85,7 @@ async function Plan({ params }: { params: Promise<{ id: string }> }) {
                 ))}
               </ol>
             )}
-            <NewMilestoneForm projectId={p.id} />
+            <NewMilestoneForm projectId={p.id} currency={p.currency} />
           </div>
 
           <div className="flex gap-3 rounded-[14px] bg-brand-soft px-5 py-[18px] text-[15px] leading-relaxed text-brand-deep">

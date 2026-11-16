@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { activity, invitation, milestone, project } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { cleanSkills } from "@/lib/skills";
+import { appCurrency } from "@/lib/settings";
 import { findMatches, MIN_SCORE } from "@/lib/matching";
 import { AiFailedError, AiNotConfiguredError, MAX_AI_GENERATIONS, generatePlan } from "@/lib/ai/plan";
 
@@ -98,7 +99,7 @@ export async function createProject(_: FormState, formData: FormData): Promise<F
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const id = crypto.randomUUID();
-  await db.insert(project).values({ id, clientId: user.id, ...parsed.data });
+  await db.insert(project).values({ id, clientId: user.id, currency: appCurrency(), ...parsed.data });
   redirect(`/projects/${id}/plan`);
 }
 
@@ -207,7 +208,7 @@ export async function writePlanWithAi(projectId: string, _: FormState, formData:
 
   let plan;
   try {
-    plan = await generatePlan({ title: p.title, idea: p.idea, answers });
+    plan = await generatePlan({ title: p.title, idea: p.idea, answers, currency: p.currency });
   } catch (err) {
     if (err instanceof AiNotConfiguredError || err instanceof AiFailedError) return { error: err.message };
     throw err;
@@ -224,7 +225,7 @@ export async function writePlanWithAi(projectId: string, _: FormState, formData:
           position: i + 1,
           title: m.title,
           criteria: m.criteria,
-          amount: m.amountUsd,
+          amount: m.amount,
           durationDays: m.days,
         })
         .run(),

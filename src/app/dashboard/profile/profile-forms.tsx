@@ -8,7 +8,7 @@ import { addProof, deleteProof, saveProfile } from "../actions";
 
 type ProfileData = { headline: string; bio: string; location: string; hourlyRate: number; available: boolean; skills: string[] };
 
-export function ProfileForm({ initial }: { initial: ProfileData | null }) {
+export function ProfileForm({ initial, currency }: { initial: ProfileData | null; currency: string }) {
   const [state, action, pending] = useActionState(saveProfile, undefined);
   const e = state?.fieldErrors ?? {};
   return (
@@ -29,7 +29,7 @@ export function ProfileForm({ initial }: { initial: ProfileData | null }) {
           <input name="location" defaultValue={initial?.location} maxLength={80} placeholder="Lagos · GMT+1" className={inputClass} />
         </label>
         <label className="flex flex-col gap-2 text-[15px] font-semibold">
-          Hourly rate (USD)
+          Hourly rate ({currency})
           <input name="hourlyRate" type="number" inputMode="numeric" min={1} max={1000} step={1} required defaultValue={initial?.hourlyRate} aria-invalid={!!e.hourlyRate} className={inputClass} />
           <FieldError id="rate-error" message={e.hourlyRate} />
         </label>

@@ -65,7 +65,13 @@ export const sampleMilestones: MilestoneInput[] = [
 
 /** Ticks skills in a SkillPicker inside the given form (or the page). */
 export async function pickSkills(scope: Page | import("@playwright/test").Locator, skills: string[]) {
-  for (const s of skills) await scope.getByRole("checkbox", { name: s, exact: true }).check({ force: true });
+  for (const s of skills) {
+    const box = scope.getByRole("checkbox", { name: s, exact: true });
+    // Tap the visible chip (the checkbox itself is visually hidden), like a person would.
+    const chip = scope.locator("label").filter({ hasText: new RegExp(`^\\s*${s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}\\s*$`) });
+    if (!(await box.isChecked())) await chip.click();
+    await expect(box).toBeChecked();
+  }
 }
 
 /** Saves the project's skills on the plan page. */
@@ -188,4 +194,13 @@ export async function reviewWork(reviewerPage: Page, projectTitle: string, posit
   }
   await form.getByRole("button", { name: "Submit review" }).click();
   await expect(reviewerPage).toHaveURL("/review");
+}
+
+/** Owner funds a milestone through the (pretend) Paystack checkout and returns to the project. */
+export async function fundViaCheckout(page: Page, position: number) {
+  await page.getByRole("button", { name: `Fund milestone ${position}` }).click();
+  await expect(page).toHaveURL(/\/payments\/fake-checkout\?/);
+  await page.getByRole("button", { name: /^Pay / }).click();
+  await expect(page).toHaveURL(/\/projects\/[^/]+\?payment=funded$/);
+  await expect(page.getByRole("listitem", { name: new RegExp(`^Milestone ${position}:`) })).toContainText("Funded");
 }

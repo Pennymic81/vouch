@@ -13,6 +13,9 @@ import { project, user } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { formatMoney, projectStatusLabel } from "@/lib/projects";
 import { milestoneDetails, recentActivity, runAutoApprovals } from "@/lib/delivery";
+import { payoutsForProject, splitFee } from "@/lib/payments";
+import { paymentsEnabled } from "@/lib/paystack";
+import { platformFeePercent } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Your project" };
 
@@ -32,8 +35,14 @@ async function DevProject({ params }: { params: Promise<{ id: string }> }) {
   if (!row) notFound();
   const { p } = row;
   const [milestones, log] = await Promise.all([milestoneDetails(p.id), recentActivity(p.id)]);
-  const earned = milestones.filter((m) => m.status === "paid").reduce((s, m) => s + m.amount, 0);
-  const inEscrow = milestones.filter((m) => m.status !== "planned" && m.status !== "paid").reduce((s, m) => s + m.amount, 0);
+  const payouts = await payoutsForProject(p.id);
+  const fee = platformFeePercent();
+  const earned = paymentsEnabled()
+    ? payouts.reduce((s, x) => s + x.po.net, 0)
+    : milestones.filter((m) => m.status === "paid").reduce((s, m) => s + m.amount, 0);
+  const inEscrow = milestones
+    .filter((m) => m.status !== "planned" && m.status !== "paid")
+    .reduce((s, m) => s + (paymentsEnabled() ? splitFee(m.amount).net : m.amount), 0);
 
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-7 px-6 pb-20 pt-9">
@@ -68,9 +77,12 @@ async function DevProject({ params }: { params: Promise<{ id: string }> }) {
             <h2 id="pay-h" className="text-lg font-bold">Your pay</h2>
             <dl className="flex flex-col gap-4 text-[15px]">
               <div className="flex justify-between"><dt className="text-slate-300">Locked in escrow for you</dt><dd className="font-bold">{formatMoney(inEscrow, p.currency)}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-300">Paid to you</dt><dd className="font-bold" data-testid="dev-earned">{formatMoney(earned, p.currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-300">Approved for you</dt><dd className="font-bold" data-testid="dev-earned">{formatMoney(earned, p.currency)}</dd></div>
             </dl>
-            <p className="text-xs text-slate-400">Payments are simulated until card payments are switched on.</p>
+            <p className="text-xs text-slate-400">
+              {paymentsEnabled() ? `After Vouch's ${fee}% fee. ` : "Payments are simulated until Paystack is connected. "}
+              {paymentsEnabled() && <Link href="/dashboard/payouts" className="text-brand-light underline">Bank account & payouts</Link>}
+            </p>
           </section>
           {log.length > 0 && (
             <Card className="flex flex-col gap-3.5 p-6">

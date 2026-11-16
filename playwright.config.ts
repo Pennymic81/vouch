@@ -33,6 +33,10 @@ export default defineConfig({
       E2E: "1",
       AI_FAKE: "1", // tests use a predictable stand-in instead of the real AI
       REVIEWER_EMAILS: "*@qa.vouch.test",
+      APP_CURRENCY: "USD", // keeps amounts like "$700" in assertions
+      PAYSTACK_FAKE: "1", // pretend Paystack: no real API calls or money
+      PAYSTACK_SECRET_KEY: "sk_test_e2e_only_webhook_signing_key", // used only to sign test webhooks
+      PLATFORM_FEE_PERCENT: "10",
     },
   },
 });
