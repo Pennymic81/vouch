@@ -51,3 +51,8 @@ next-env.d.ts
 /vouch.db*
 /test.db*
 .env
+
+# local databases
+*.db
+*.db-shm
+*.db-wal
