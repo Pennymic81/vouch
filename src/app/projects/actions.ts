@@ -36,7 +36,7 @@ const milestoneSchema = z.object({
     ),
   amount: z.preprocess(
     blankToUndefined,
-    z.coerce.number({ error: "Enter an amount." }).int("Use a whole number.").min(1, "The amount must be at least 1.").max(1_000_000, "That amount is too large."),
+    z.coerce.number({ error: "Enter an amount." }).int("Use a whole number.").min(1, "The amount must be at least 1.").max(100_000_000, "That amount is too large."),
   ),
   durationDays: z.preprocess(
     blankToUndefined,

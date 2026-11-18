@@ -80,7 +80,7 @@ function MilestoneFields({ state, prefix, initial, currency }: { state: FormStat
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-2 text-[15px] font-semibold">
           Amount ({currency})
-          <input name="amount" type="number" inputMode="numeric" min={1} max={1000000} step={1} defaultValue={initial?.amount} required aria-invalid={!!e.amount} aria-describedby={e.amount ? id("amount") : undefined} className={inputClass} />
+          <input name="amount" type="number" inputMode="numeric" min={1} max={100000000} step={1} defaultValue={initial?.amount} required aria-invalid={!!e.amount} aria-describedby={e.amount ? id("amount") : undefined} className={inputClass} />
           <FieldError id={id("amount")} message={e.amount} />
         </label>
         <label className="flex flex-col gap-2 text-[15px] font-semibold">

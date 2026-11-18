@@ -30,7 +30,7 @@ export function ProfileForm({ initial, currency }: { initial: ProfileData | null
         </label>
         <label className="flex flex-col gap-2 text-[15px] font-semibold">
           Hourly rate ({currency})
-          <input name="hourlyRate" type="number" inputMode="numeric" min={1} max={1000} step={1} required defaultValue={initial?.hourlyRate} aria-invalid={!!e.hourlyRate} className={inputClass} />
+          <input name="hourlyRate" type="number" inputMode="numeric" min={1} max={10000000} step={1} required defaultValue={initial?.hourlyRate} aria-invalid={!!e.hourlyRate} className={inputClass} />
           <FieldError id="rate-error" message={e.hourlyRate} />
         </label>
       </div>

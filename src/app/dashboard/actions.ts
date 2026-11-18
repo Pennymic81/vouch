@@ -38,7 +38,7 @@ const profileSchema = z.object({
   location: z.string().trim().max(80),
   hourlyRate: z.preprocess(
     blankToUndefined,
-    z.coerce.number({ error: "Enter your hourly rate." }).int("Use a whole number.").min(1, "Your rate must be at least 1.").max(1000, "That rate is too high."),
+    z.coerce.number({ error: "Enter your hourly rate." }).int("Use a whole number.").min(1, "Your rate must be at least 1.").max(10_000_000, "That rate is too high."),
   ),
   skills: z.array(z.string()).min(1, "Pick at least one skill.").max(10, "Pick up to 10 skills."),
 });

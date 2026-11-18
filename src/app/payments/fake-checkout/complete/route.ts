@@ -4,8 +4,9 @@ import { appUrl } from "@/lib/settings";
 
 /** Test-only: completes or cancels a pretend checkout, then returns to the app like Paystack does (full redirect). */
 export async function GET(request: NextRequest) {
-  if (!isFakePaystack()) return new NextResponse("Not found", { status: 404 });
+  // Read the request first: otherwise Next.js treats this route as static and freezes the answer at build time.
   const q = request.nextUrl.searchParams;
+  if (!isFakePaystack()) return new NextResponse("Not found", { status: 404 });
   const reference = q.get("reference") ?? "";
   const callback = q.get("callback") ?? "";
   const outcome = q.get("outcome") === "success" ? "success" : "abandoned";

@@ -7,8 +7,9 @@ import { formatMoney, fromMinor } from "@/lib/currency";
 export const metadata: Metadata = { title: "Test checkout" };
 
 async function Checkout({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  if (!isFakePaystack()) notFound();
+  // Read the request first so this is decided per visit, not frozen in at build time.
   const sp = await searchParams;
+  if (!isFakePaystack()) notFound();
   const reference = String(sp.reference ?? "");
   const callback = String(sp.callback ?? "");
   const charge = fakeStore().charges.get(reference);

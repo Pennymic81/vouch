@@ -252,3 +252,9 @@ test("long match lists show the top 10 first, with a way to see everyone", async
   expect(await page.getByRole("list", { name: "Matches" }).getByRole("heading", { level: 2 }).count()).toBeGreaterThan(10);
   for (const d of devs) await d.context.close();
 });
+
+test("developers can set naira-sized hourly rates", async ({ browser }) => {
+  const dev = await createDeveloper(browser, { name: `Naira Rate ${tag()}`, rate: 15000, skills: ["AI chatbots"] });
+  await expect(dev.page.getByRole("form", { name: "Your profile" }).getByLabel(/Hourly rate/)).toHaveValue("15000");
+  await dev.context.close();
+});

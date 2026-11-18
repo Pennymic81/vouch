@@ -199,3 +199,10 @@ test.describe("privacy between accounts", () => {
     await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
   });
 });
+
+test("large naira-sized amounts are accepted", async ({ page }) => {
+  await signUpViaApi(page, "client");
+  await createProject(page);
+  await addMilestone(page, { title: "Big milestone", criteria: ["Works"], amount: 2_500_000, days: 20 });
+  await expect(page.getByTestId("total-milestones")).toHaveText("1");
+});
